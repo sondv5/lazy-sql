@@ -5,7 +5,7 @@ target/
 .DS_Store
 Thumbs.db
 *.local
-shots/
+/shots/
 
 # maintainer-local tooling config
 opencode.json
