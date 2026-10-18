@@ -41,7 +41,7 @@
 
 - **Node.js ≥ 22.5** (the engine — spawned by your AI tools and by the app)
 - Desktop app: **Windows 10/11 (WebView2)** or **macOS 10.15+** (WKWebView)
-- Building the app from source: Rust toolchain (stable) + platform Tauri prerequisites. Build for macOS **on macOS**, Windows **on Windows**.
+- Building the app from source: Rust toolchain (stable) + platform Tauri prerequisites. Build for macOS **on macOS**, Windows **on Windows**. Prebuilt installers (Windows NSIS/MSI, macOS universal `.dmg`) are attached to GitHub releases — CI builds them from a version tag.
 
 ## Quickstart
 

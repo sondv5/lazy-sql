@@ -318,12 +318,18 @@
     <p class="sub">Install the app, add a connection, then flip the toggle for your AI tool. The engine ships inside the app — Node.js ≥ 22.5 is the only requirement.</p>
     <div class="cols">
       <div>
-        <div class="os"><span class="chip on">Windows</span><span class="chip">macOS</span></div>
-        <a class="btn primary" href="https://github.com/sondv5/lazy-sql/releases/latest/download/LAZY-SQL-0.1.0-win-x64-setup.exe">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 4v11"/><path d="m7.5 11 4.5 4.5L16.5 11"/><path d="M4.5 19.5h15"/></svg>
-          LAZY-SQL-0.1.0-win-x64-setup.exe
-        </a>
-        <p class="note">Per-user install — no admin rights. An MSI package is available on the <a href="https://github.com/sondv5/lazy-sql/releases/latest" target="_blank" rel="noopener">releases page</a> for managed deployments. macOS: build from source with <code>npm run build:app</code> (Tauri prerequisites required).</p>
+        <div class="os"><span class="chip on">Windows</span><span class="chip on">macOS</span></div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap">
+          <a class="btn primary" href="https://github.com/sondv5/lazy-sql/releases/latest/download/LAZY-SQL-0.1.0-win-x64-setup.exe">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 4v11"/><path d="m7.5 11 4.5 4.5L16.5 11"/><path d="M4.5 19.5h15"/></svg>
+            Windows — setup .exe
+          </a>
+          <a class="btn" href="https://github.com/sondv5/lazy-sql/releases/latest/download/LAZY-SQL-0.1.0-macos-universal.dmg">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 4v11"/><path d="m7.5 11 4.5 4.5L16.5 11"/><path d="M4.5 19.5h15"/></svg>
+            macOS — universal .dmg
+          </a>
+        </div>
+        <p class="note">Windows: per-user install, no admin rights — an MSI for managed deployments is on the <a href="https://github.com/sondv5/lazy-sql/releases/latest" target="_blank" rel="noopener">releases page</a>. macOS: unsigned build — on first launch right-click the app → <b>Open</b> (or <code>xattr -d com.apple.quarantine "/Applications/LAZY SQL.app"</code>). Node.js ≥ 22.5 required on both platforms.</p>
         <div class="code" style="margin-top:18px">
 <span class="c"># register the MCP server (example: OpenCode)</span><br />
 <span class="c"># easiest path: use the AI tools page in the app</span><br />
