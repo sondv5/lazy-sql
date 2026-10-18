@@ -54,6 +54,8 @@ npm run build:app           # production installers (NSIS/MSI on Windows, .dmg/a
 npm test                    # engine unit + integration smoke tests
 ```
 
+Releases & CI: every push runs the test suite on GitHub Actions; pushing a tag (`git tag v0.2.0 && git push --tags`) builds the Windows (NSIS + MSI) and macOS (universal `.dmg`) installers and attaches them to the release.
+
 Dev tips:
 
 - **Web dev mode** runs the full UI in a browser: open `http://127.0.0.1:1420/?engine=4788&token=<engine token>` (the token is printed by the engine at start; when the app spawns the engine you don't need this).
