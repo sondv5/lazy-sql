@@ -7,6 +7,9 @@ Thumbs.db
 *.local
 shots/
 
+# maintainer-local tooling config
+opencode.json
+
 # engine runtime data (connections with passwords, logs, instances)
 engine/data/
 engine/.data/
