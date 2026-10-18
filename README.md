@@ -5,7 +5,9 @@
 [![MCP](https://img.shields.io/badge/MCP-stdio-8b5cf6.svg)](https://modelcontextprotocol.io)
 [![Website](https://img.shields.io/badge/website-sondv5.github.io%2Flazy--sql-4d6ae0.svg)](https://sondv5.github.io/lazy-sql/)
 
-**LAZY SQL** gives your AI coding tools reviewed access to your databases. Read-only SQL runs instantly; **everything that changes data opens a review dialog first**. It is the next generation of the local `sql-mcp`: same multi-database engine (PostgreSQL / MySQL / SQL Server / SQLite), with a lightweight Tauri desktop app for connections, execution logs, workspace MCP toggles and the review dialog.
+**LAZY SQL** gives your AI coding tools reviewed access to your databases.
+
+![LAZY SQL review dialog](docs/assets/shots/07-review.png) Read-only SQL runs instantly; **everything that changes data opens a review dialog first**. It is the next generation of the local `sql-mcp`: same multi-database engine (PostgreSQL / MySQL / SQL Server / SQLite), with a lightweight Tauri desktop app for connections, execution logs, workspace MCP toggles and the review dialog.
 
 ```
 [ AI tool: OpenCode · Claude Code · Kiro · Cursor ]

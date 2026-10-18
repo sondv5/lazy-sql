@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>LAZY SQL — Reviewed SQL access for AI coding tools</title>
+<meta name="description" content="LAZY SQL gives your AI coding tools reviewed access to your databases. Read-only queries run instantly; every write opens a review dialog first. Local-first MCP server + lightweight Tauri desktop app." />
+<meta property="og:title" content="LAZY SQL — Reviewed SQL access for AI coding tools" />
+<meta property="og:description" content="Read-only queries run instantly. Every write opens a review dialog first. MCP server + desktop app for PostgreSQL, MySQL, SQL Server and SQLite." />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://sondv5.github.io/lazy-sql/" />
+<meta property="og:image" content="https://sondv5.github.io/lazy-sql/assets/shots/07-review.png" />
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+<style>
+  :root {
+    --purple: #4d6ae0;
+    --purple-deep: #3a52c0;
+    --purple-soft: #eef1fc;
+    --purple-border: #ccd5f5;
+    --ink: #101828;
+    --body: #344054;
+    --muted: #667085;
+    --line: #e6e5ee;
+    --bg: #fbfbfd;
+    --card: #ffffff;
+    --ok-bg: #e7f6ec;
+    --ok: #16794a;
+    --warn-bg: #fff4e5;
+    --warn: #b45309;
+    --err-bg: #fdecec;
+    --err: #b3261e;
+    --mono: ui-monospace, "Cascadia Code", "SF Mono", Consolas, monospace;
+    --sans: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", sans-serif;
+    --shadow: 0 1px 2px rgba(16, 24, 40, .05), 0 8px 24px -12px rgba(16, 24, 40, .18);
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--body); font: 16px/1.65 var(--sans); }
+  h1, h2, h3 { color: var(--ink); line-height: 1.2; margin: 0; }
+  a { color: var(--purple-deep); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code { font-family: var(--mono); font-size: .88em; background: var(--purple-soft); border: 1px solid var(--purple-border); border-radius: 6px; padding: 1px 6px; color: var(--purple-deep); }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+
+  /* ---------- nav ---------- */
+  nav { position: sticky; top: 0; z-index: 50; background: rgba(251, 251, 253, .88); backdrop-filter: blur(12px); border-bottom: 1px solid var(--line); }
+  nav .wrap { display: flex; align-items: center; gap: 28px; height: 64px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; color: var(--ink); font-size: 17px; letter-spacing: .2px; }
+  .brand svg { width: 26px; height: 26px; }
+  nav .links { display: flex; gap: 22px; font-size: 14.5px; font-weight: 500; }
+  nav .links a { color: var(--body); }
+  nav .spacer { flex: 1; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; border-radius: 10px; padding: 9px 16px; font-size: 14px; font-weight: 600; border: 1px solid var(--line); background: #fff; color: var(--ink); cursor: pointer; transition: .15s; }
+  .btn:hover { text-decoration: none; border-color: #cfcede; box-shadow: var(--shadow); }
+  .btn.primary { background: var(--purple); border-color: var(--purple); color: #fff; }
+  .btn.primary:hover { background: var(--purple-deep); }
+  .btn.ghost-dark { background: var(--ink); border-color: var(--ink); color: #fff; }
+  .btn svg { width: 16px; height: 16px; }
+
+  /* ---------- hero ---------- */
+  .hero { padding: 72px 0 56px; background:
+      radial-gradient(900px 420px at 85% -10%, rgba(77, 106, 224, .14), transparent 60%),
+      radial-gradient(700px 380px at -10% 10%, rgba(139, 92, 246, .10), transparent 55%);
+  }
+  .hero .wrap { display: grid; grid-template-columns: 1.02fr .98fr; gap: 56px; align-items: center; }
+  .pill { display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; letter-spacing: .4px; color: var(--purple-deep); background: var(--purple-soft); border: 1px solid var(--purple-border); border-radius: 999px; padding: 5px 12px; margin-bottom: 20px; }
+  .hero h1 { font-size: 46px; letter-spacing: -1.2px; }
+  .hero h1 em { font-style: normal; color: var(--purple); }
+  .hero p.lead { font-size: 18px; margin: 18px 0 28px; max-width: 540px; }
+  .hero .cta { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+  .hero .meta { margin-top: 16px; font-size: 13px; color: var(--muted); display: flex; gap: 16px; flex-wrap: wrap; }
+  .hero .meta span { display: inline-flex; align-items: center; gap: 6px; }
+  .hero-shot { position: relative; }
+  .hero-shot .frame { border-radius: 16px; overflow: hidden; box-shadow: 0 24px 60px -24px rgba(16, 24, 40, .35), 0 0 0 1px var(--line); background: #e9e7f2; }
+  .hero-shot img { display: block; width: 100%; height: auto; }
+  .hero-shot .tag { position: absolute; top: -14px; right: 18px; background: var(--ink); color: #fff; font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: 999px; box-shadow: var(--shadow); }
+
+  /* ---------- strip ---------- */
+  .strip { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: #fff; }
+  .strip .wrap { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; padding: 26px 24px; }
+  .stat { text-align: center; }
+  .stat b { display: block; font-size: 22px; color: var(--ink); letter-spacing: -.4px; }
+  .stat span { font-size: 13px; color: var(--muted); }
+
+  /* ---------- sections ---------- */
+  section { padding: 76px 0; }
+  .kicker { font-size: 12.5px; font-weight: 700; letter-spacing: 1.6px; text-transform: uppercase; color: var(--purple); margin-bottom: 12px; }
+  section h2 { font-size: 32px; letter-spacing: -.8px; margin-bottom: 14px; }
+  section .sub { font-size: 17px; color: var(--muted); max-width: 680px; margin: 0 0 40px; }
+
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .feature { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 22px; box-shadow: 0 1px 2px rgba(16, 24, 40, .04); }
+  .feature .ico { width: 38px; height: 38px; border-radius: 10px; background: var(--purple-soft); border: 1px solid var(--purple-border); display: grid; place-items: center; color: var(--purple-deep); margin-bottom: 14px; }
+  .feature .ico svg { width: 19px; height: 19px; }
+  .feature h3 { font-size: 16.5px; margin-bottom: 6px; }
+  .feature p { margin: 0; font-size: 14.5px; color: var(--muted); }
+
+  /* ---------- how ---------- */
+  .how { background: #fff; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .flow { display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; gap: 14px; align-items: stretch; margin-bottom: 44px; }
+  .flow .box { border: 1px solid var(--line); border-radius: 14px; background: var(--bg); padding: 18px; }
+  .flow .box b { color: var(--ink); display: block; margin-bottom: 6px; font-size: 15px; }
+  .flow .box p { margin: 0; font-size: 13.5px; color: var(--muted); }
+  .flow .box.hot { background: var(--purple-soft); border-color: var(--purple-border); }
+  .flow .arrow { display: grid; place-items: center; color: var(--purple); font-size: 20px; }
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; counter-reset: step; }
+  .step { position: relative; padding-left: 52px; }
+  .step::before { counter-increment: step; content: counter(step); position: absolute; left: 0; top: 0; width: 34px; height: 34px; border-radius: 50%; background: var(--purple); color: #fff; font-weight: 700; display: grid; place-items: center; font-size: 15px; }
+  .step b { color: var(--ink); display: block; margin-bottom: 4px; }
+  .step p { margin: 0; font-size: 14.5px; color: var(--muted); }
+
+  /* ---------- gallery ---------- */
+  .shots { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+  .shot { margin: 0; }
+  .shot a { display: block; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); box-shadow: var(--shadow); background: #fff; transition: transform .18s ease; }
+  .shot a:hover { transform: translateY(-3px); text-decoration: none; }
+  .shot img { display: block; width: 100%; height: auto; }
+  .shot figcaption { margin-top: 10px; font-size: 13.5px; color: var(--muted); }
+  .shot figcaption b { color: var(--ink); }
+
+  /* ---------- install ---------- */
+  .install { background: #fff; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .install .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
+  .code { background: #0f1222; color: #e6e8f5; border-radius: 14px; padding: 18px 20px; font-family: var(--mono); font-size: 12.8px; line-height: 1.6; overflow: auto; box-shadow: var(--shadow); }
+  .code .c { color: #8b93b8; }
+  .code .k { color: #a5b4fc; }
+  .code .s { color: #86efac; }
+  .os { display: flex; gap: 8px; margin-bottom: 14px; }
+  .os .chip { font-size: 12.5px; font-weight: 600; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--bg); color: var(--muted); }
+  .os .chip.on { background: var(--purple-soft); border-color: var(--purple-border); color: var(--purple-deep); }
+  .note { font-size: 13.5px; color: var(--muted); margin-top: 12px; }
+
+  /* ---------- security ---------- */
+  .sec-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .sec { display: flex; gap: 14px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 20px; }
+  .sec svg { width: 20px; height: 20px; color: var(--ok); flex: none; margin-top: 2px; }
+  .sec b { color: var(--ink); display: block; margin-bottom: 4px; font-size: 15px; }
+  .sec p { margin: 0; font-size: 14px; color: var(--muted); }
+
+  /* ---------- footer ---------- */
+  footer { border-top: 1px solid var(--line); padding: 36px 0 48px; background: #fff; }
+  footer .wrap { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; font-size: 14px; color: var(--muted); }
+  footer .spacer { flex: 1; }
+  footer .brand { font-size: 15px; }
+
+  @media (max-width: 960px) {
+    .hero .wrap { grid-template-columns: 1fr; gap: 40px; }
+    .hero h1 { font-size: 36px; }
+    .grid, .steps { grid-template-columns: 1fr 1fr; }
+    .flow { grid-template-columns: 1fr; }
+    .flow .arrow { transform: rotate(90deg); }
+    .shots, .install .cols, .sec-grid { grid-template-columns: 1fr; }
+    nav .links { display: none; }
+  }
+  @media (max-width: 620px) {
+    .grid, .steps, .strip .wrap { grid-template-columns: 1fr; }
+    section { padding: 56px 0; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <a class="brand" href="#top">
+      <svg viewBox="0 0 64 64" fill="none" aria-hidden="true"><path d="M13.6 29.8 L13.6 60.5 L43.8 60.5 L36.9 40.2 L35.6 33.6 Z" fill="#4d6ae0"/><path d="M14.5 5.5 L10.5 26.5 Q10.3 30.9 12.4 31.6 L34.8 33.5 L35.6 33.6 L47.9 27.8 L46.2 9.5 Q30 17 14.5 5.5 Z" fill="#4d6ae0"/><rect x="16" y="19.2" width="3" height="5.4" rx="1.3" fill="#fff"/><rect x="24.2" y="19.2" width="3" height="5.4" rx="1.3" fill="#fff"/><path d="M41.5 51.5 C 44 57.8 49.8 60.8 55.2 58.8 C 60.4 56.8 61.9 49.2 58.7 44 C 56.3 40 51.3 38.6 47.7 40.2" stroke="#4d6ae0" stroke-width="4.6" fill="none" stroke-linecap="round"/></svg>
+      LAZY SQL
+    </a>
+    <div class="links">
+      <a href="#features">Features</a>
+      <a href="#how">How it works</a>
+      <a href="#screenshots">Screenshots</a>
+      <a href="#install">Install</a>
+      <a href="#security">Security</a>
+    </div>
+    <span class="spacer"></span>
+    <a class="btn" href="https://github.com/sondv5/lazy-sql" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.56v-2.17c-3.2.7-3.87-1.37-3.87-1.37-.52-1.33-1.28-1.68-1.28-1.68-1.04-.72.08-.7.08-.7 1.15.08 1.76 1.19 1.76 1.19 1.03 1.75 2.69 1.25 3.34.95.1-.75.4-1.25.72-1.54-2.55-.29-5.23-1.28-5.23-5.68 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.78 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.41-2.69 5.38-5.25 5.67.41.35.77 1.05.77 2.12v3.14c0 .31.21.68.8.56A10.52 10.52 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5Z"/></svg>
+      GitHub
+    </a>
+    <a class="btn primary" href="https://github.com/sondv5/lazy-sql/releases/latest" target="_blank" rel="noopener">Download</a>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <div class="wrap">
+    <div>
+      <span class="pill">MCP server · Tauri desktop app · MIT</span>
+      <h1>Give your AI tools SQL access — <em>with a human in the loop.</em></h1>
+      <p class="lead">LAZY SQL is a local MCP server for <b>OpenCode, Claude Code, Kiro and Cursor</b>. Read-only queries run instantly. Every write, schema change or unclear statement opens a <b>review dialog</b> first — nothing touches your data until you approve it.</p>
+      <div class="cta">
+        <a class="btn primary" href="https://github.com/sondv5/lazy-sql/releases/latest" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 4v11"/><path d="m7.5 11 4.5 4.5L16.5 11"/><path d="M4.5 19.5h15"/></svg>
+          Download for Windows
+        </a>
+        <a class="btn ghost-dark" href="https://github.com/sondv5/lazy-sql" target="_blank" rel="noopener">View source</a>
+      </div>
+      <div class="meta">
+        <span>✓ PostgreSQL · MySQL · SQL Server · SQLite</span>
+        <span>✓ Windows &amp; macOS</span>
+        <span>✓ 100% local — no cloud, no telemetry</span>
+      </div>
+    </div>
+    <div class="hero-shot">
+      <span class="tag">Write detected → approval required</span>
+      <div class="frame"><img src="assets/shots/07-review.png" alt="LAZY SQL review dialog confirming an UPDATE statement" width="1440" height="900" /></div>
+    </div>
+  </div>
+</header>
+
+<div class="strip">
+  <div class="wrap">
+    <div class="stat"><b>4</b><span>database engines</span></div>
+    <div class="stat"><b>3</b><span>MCP tools, one gate</span></div>
+    <div class="stat"><b>~5.6 MB</b><span>single-file engine</span></div>
+    <div class="stat"><b>0</b><span>bytes leave your machine</span></div>
+  </div>
+</div>
+
+<section id="features">
+  <div class="wrap">
+    <div class="kicker">Features</div>
+    <h2>Built for agents that move fast — and databases that don't forgive</h2>
+    <p class="sub">Everything an AI session needs to query safely, and everything you need to stay in control of it.</p>
+    <div class="grid">
+      <div class="feature">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6v5c0 4.5 3 8 7 10 4-2 7-5.5 7-10V6Z"/><path d="m9.5 12 1.8 1.8 3.4-3.6"/></svg></div>
+        <h3>Review dialog, not a popup page</h3>
+        <p>The engine spawns a dedicated frameless window — always-on-top, docked to the screen edge — with an editable SQL editor, schema-aware autocomplete, danger warnings and a countdown. The edited SQL is what executes and gets logged.</p>
+      </div>
+      <div class="feature">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="m5 7 5 5-5 5"/><path d="M13 17h6"/></svg></div>
+        <h3>Built-in SQL editor</h3>
+        <p>Pick a connection and write SQL yourself with syntax highlighting and schema autocomplete. Read-only connections block writes here too, and every manual run lands in the execution log.</p>
+      </div>
+      <div class="feature">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="10.5" width="13" height="9" rx="2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></svg></div>
+        <h3>Enable / read-only per connection</h3>
+        <p>Every connection has an <code>enabled</code> flag for agent visibility and a <code>read-only</code> flag that blocks writes server-side <i>and</i> at the driver session level. Lock an entire workspace read-only with one env var.</p>
+      </div>
+      <div class="feature">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="4" width="7" height="7" rx="1.6"/><rect x="13" y="4" width="7" height="7" rx="1.6"/><rect x="4" y="13" width="7" height="7" rx="1.6"/><rect x="13" y="13" width="7" height="7" rx="1.6"/></svg></div>
+        <h3>Per-workspace MCP toggles</h3>
+        <p>Register or remove LAZY SQL for OpenCode, Claude Code, Kiro and Cursor — globally or per project folder — and choose exactly which connections each scope may use. Config edits are minimal, atomic and backed up once.</p>
+      </div>
+      <div class="feature">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15.5H6.5A2.5 2.5 0 0 0 4 21V5.5Z"/><path d="M4 18.5A2.5 2.5 0 0 1 6.5 16H20"/></svg></div>
+        <h3>Logs on every run</h3>
+        <p>Read queries, approved writes (final SQL + params), rejections, timeouts and blocks are all written to a local log with the exact payload returned to the agent. Browse by date, filter by status.</p>
+      </div>
+      <div class="feature">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 8h13l-3-3"/><path d="M17 16H4l3 3"/></svg></div>
+        <h3>Import / export connections</h3>
+        <p>All connections travel as a single <code>.json</code> file. Passwords are opt-in only — <code>${'${ENV_VAR}'}</code> placeholders preferred. Conflict handling on import: skip, overwrite or keep both.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="how" id="how">
+  <div class="wrap">
+    <div class="kicker">How it works</div>
+    <h2>One local engine, one human gate</h2>
+    <p class="sub">The MCP stdio server and the desktop app share a single Node engine. Agents talk stdio; the dialog talks to the same engine over a token-guarded localhost API.</p>
+    <div class="flow">
+      <div class="box"><b>AI tool</b><p>OpenCode, Claude Code, Kiro or Cursor calls <code>execute_sql</code> over stdio MCP.</p></div>
+      <div class="arrow">→</div>
+      <div class="box"><b>LAZY SQL engine</b><p>Classifies the statement. Reads run instantly. Writes wait for a decision.</p></div>
+      <div class="arrow">→</div>
+      <div class="box hot"><b>Review dialog</b><p>Spawned per review — edit the SQL, run it, or reject. Rejections close the dialog and tell the agent.</p></div>
+    </div>
+    <div class="steps">
+      <div class="step"><b>The agent asks</b><p><code>execute_sql</code> with SQL, params and an optional purpose note.</p></div>
+      <div class="step"><b>You decide</b><p>Read-only runs need nothing. Writes open the dialog: approve (possibly edited), or reject. Expired reviews auto-reject.</p></div>
+      <div class="step"><b>Everything is logged</b><p>The final SQL, params, duration and the exact result payload sent back to the agent — locally, per day.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="screenshots">
+  <div class="wrap">
+    <div class="kicker">Screenshots</div>
+    <h2>A quiet, fast companion app</h2>
+    <p class="sub">The main window is for setup and history — connections, SQL editor, logs, AI tool registrations and settings. Reviews never interrupt it; they belong to the agent session that asked.</p>
+    <div class="shots">
+      <figure class="shot">
+        <a href="assets/shots/03-query.png" target="_blank" rel="noopener"><img src="assets/shots/03-query.png" alt="Built-in SQL editor running a join query with live results" loading="lazy" /></a>
+        <figcaption><b>SQL editor</b> — schema-aware autocomplete, live results, every run logged.</figcaption>
+      </figure>
+      <figure class="shot">
+        <a href="assets/shots/02-connections.png" target="_blank" rel="noopener"><img src="assets/shots/02-connections.png" alt="Connection manager with per-connection enable and read-only flags" loading="lazy" /></a>
+        <figcaption><b>Connections</b> — enable/disable, read-only mode, test, import/export.</figcaption>
+      </figure>
+      <figure class="shot">
+        <a href="assets/shots/04-logs.png" target="_blank" rel="noopener"><img src="assets/shots/04-logs.png" alt="Execution history with status filters" loading="lazy" /></a>
+        <figcaption><b>Execution history</b> — executed, rejected, blocked and errored runs with filters.</figcaption>
+      </figure>
+      <figure class="shot">
+        <a href="assets/shots/05-ai-tools.png" target="_blank" rel="noopener"><img src="assets/shots/05-ai-tools.png" alt="AI tool registration toggles per project folder" loading="lazy" /></a>
+        <figcaption><b>AI tools</b> — per-project MCP registration with per-tool connection scope.</figcaption>
+      </figure>
+      <figure class="shot">
+        <a href="assets/shots/01-home.png" target="_blank" rel="noopener"><img src="assets/shots/01-home.png" alt="Overview page with engine status and live agent sessions" loading="lazy" /></a>
+        <figcaption><b>Overview</b> — engine status, connection counts and live agent sessions.</figcaption>
+      </figure>
+      <figure class="shot">
+        <a href="assets/shots/06-settings.png" target="_blank" rel="noopener"><img src="assets/shots/06-settings.png" alt="Settings page with review behavior and storage info" loading="lazy" /></a>
+        <figcaption><b>Settings</b> — review timeout, browser fallback, storage and log maintenance.</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<section class="install" id="install">
+  <div class="wrap">
+    <div class="kicker">Install</div>
+    <h2>Up and running in two minutes</h2>
+    <p class="sub">Install the app, add a connection, then flip the toggle for your AI tool. The engine ships inside the app — Node.js ≥ 22.5 is the only requirement.</p>
+    <div class="cols">
+      <div>
+        <div class="os"><span class="chip on">Windows</span><span class="chip">macOS</span></div>
+        <a class="btn primary" href="https://github.com/sondv5/lazy-sql/releases/latest/download/LAZY-SQL-0.1.0-win-x64-setup.exe">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 4v11"/><path d="m7.5 11 4.5 4.5L16.5 11"/><path d="M4.5 19.5h15"/></svg>
+          LAZY-SQL-0.1.0-win-x64-setup.exe
+        </a>
+        <p class="note">Per-user install — no admin rights. An MSI package is available on the <a href="https://github.com/sondv5/lazy-sql/releases/latest" target="_blank" rel="noopener">releases page</a> for managed deployments. macOS: build from source with <code>npm run build:app</code> (Tauri prerequisites required).</p>
+        <div class="code" style="margin-top:18px">
+<span class="c"># register the MCP server (example: OpenCode)</span><br />
+<span class="c"># easiest path: use the AI tools page in the app</span><br />
+{<br />
+&nbsp;&nbsp;<span class="k">"mcp"</span>: {<br />
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="k">"lazy-sql"</span>: {<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="k">"type"</span>: <span class="s">"local"</span>,<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="k">"command"</span>: [<span class="s">"node"</span>, <span class="s">"&lt;path-to&gt;/lazy-sql-engine.mjs"</span>],<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="k">"environment"</span>: { <span class="k">"LAZY_SQL_ALLOWED_CONNECTIONS"</span>: <span class="s">"staging-db"</span> }<br />
+&nbsp;&nbsp;&nbsp;&nbsp;}<br />
+&nbsp;&nbsp;}<br />
+}
+        </div>
+      </div>
+      <div>
+        <h3 style="margin-bottom:10px">The three MCP tools</h3>
+        <div class="code">
+<span class="k">execute_sql</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="c">— reads run instantly; writes open the review dialog</span><br />
+<span class="k">get_db_objects</span>&nbsp;&nbsp;<span class="c">— list/describe tables, views, procedures, triggers</span><br />
+<span class="k">open_db_config</span>&nbsp;<span class="c">— open the connection manager when a DB is missing</span>
+        </div>
+        <h3 style="margin:26px 0 10px">Environment (excerpt)</h3>
+        <div class="code">
+<span class="k">LAZY_SQL_ALLOWED_CONNECTIONS</span>=staging-db,prod-replica<br />
+<span class="k">LAZY_SQL_FORCE_READ_ONLY</span>=1&nbsp;&nbsp;&nbsp;&nbsp;<span class="c"># lock a whole workspace read-only</span><br />
+<span class="k">LAZY_SQL_REVIEW_TIMEOUT_MS</span>=600000&nbsp;<span class="c"># auto-reject after 10 min</span><br />
+<span class="k">LAZY_SQL_DATA_DIR</span>=~/.lazy-sql&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="c"># all state lives here</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="security">
+  <div class="wrap">
+    <div class="kicker">Security model</div>
+    <h2>Nothing runs without a decision</h2>
+    <p class="sub">A review dialog is the human approval step for every data or schema change — and read-only connections are blocked before any dialog opens.</p>
+    <div class="sec-grid">
+      <div class="sec">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6v5c0 4.5 3 8 7 10 4-2 7-5.5 7-10V6Z"/><path d="m9.5 12 1.8 1.8 3.4-3.6"/></svg>
+        <div><b>Approval before execution</b><p>INSERT / UPDATE / DELETE / DDL / CALL and anything unclear open the dialog. The edited SQL is what executes and what gets logged.</p></div>
+      </div>
+      <div class="sec">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="10.5" width="13" height="9" rx="2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></svg>
+        <div><b>Localhost only</b><p>The API binds <code>127.0.0.1</code> and every call requires a per-session token. CORS is limited to local origins. No cloud, no telemetry.</p></div>
+      </div>
+      <div class="sec">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+        <div><b>Credentials stay put</b><p>Passwords are stored locally with 0600 permissions (or resolved from <code>${'${ENV_VAR}'}</code>). The API never returns them and errors are scrubbed.</p></div>
+      </div>
+      <div class="sec">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v8"/><path d="M17.6 6.4a7.5 7.5 0 1 1-11.2 0"/></svg>
+        <div><b>Least privilege per scope</b><p>Each project folder gets its own allow-list of connections. A list with no usable entry allows <b>nothing</b> — malformed config never widens access.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span class="brand">
+      <svg viewBox="0 0 64 64" fill="none" style="width:20px;height:20px" aria-hidden="true"><path d="M13.6 29.8 L13.6 60.5 L43.8 60.5 L36.9 40.2 L35.6 33.6 Z" fill="#4d6ae0"/><path d="M14.5 5.5 L10.5 26.5 Q10.3 30.9 12.4 31.6 L34.8 33.5 L35.6 33.6 L47.9 27.8 L46.2 9.5 Q30 17 14.5 5.5 Z" fill="#4d6ae0"/><rect x="16" y="19.2" width="3" height="5.4" rx="1.3" fill="#fff"/><rect x="24.2" y="19.2" width="3" height="5.4" rx="1.3" fill="#fff"/><path d="M41.5 51.5 C 44 57.8 49.8 60.8 55.2 58.8 C 60.4 56.8 61.9 49.2 58.7 44 C 56.3 40 51.3 38.6 47.7 40.2" stroke="#4d6ae0" stroke-width="4.6" fill="none" stroke-linecap="round"/></svg>
+      LAZY SQL
+    </span>
+    <span class="spacer"></span>
+    <a href="https://github.com/sondv5/lazy-sql" target="_blank" rel="noopener">GitHub</a>
+    <a href="https://github.com/sondv5/lazy-sql/releases" target="_blank" rel="noopener">Releases</a>
+    <a href="https://github.com/sondv5/lazy-sql/blob/main/README.md" target="_blank" rel="noopener">Docs</a>
+    <a href="https://github.com/sondv5/lazy-sql/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a>
+    <span>© 2026 sondv5</span>
+  </div>
+</footer>
+
+</body>
+</html>
