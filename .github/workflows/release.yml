@@ -62,19 +62,39 @@ jobs:
           done
 
       - uses: tauri-apps/tauri-action@v0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           projectPath: apps/desktop
-          tagName: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || '' }}
-          releaseName: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || '' }}
-          releaseDraft: false
-          prerelease: false
           args: ${{ matrix.args }}
+
+      # normalize bundle names for the release page:
+      # "LAZY SQL_0.1.0_x64-setup.exe" -> "LAZY-SQL-0.1.0-win-x64-setup.exe"
+      - name: Collect installers with release names
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release-assets
+          while IFS= read -r file; do
+            base="$(basename "$file")"
+            clean="$(echo "$base" | sed -E \
+              -e 's/^LAZY SQL_/LAZY-SQL-/' \
+              -e 's/_x64-setup\.exe$/-win-x64-setup.exe/' \
+              -e 's/_x64_en-US\.msi$/-win-x64.msi/' \
+              -e 's/_universal\.dmg$/-macos-universal.dmg/' \
+              -e 's/_aarch64\.dmg$/-macos-arm64.dmg/' \
+              -e 's/_x64\.dmg$/-macos-x64.dmg/')"
+            cp "$file" "release-assets/$clean"
+          done < <(find apps/desktop/src-tauri/target -path '*/release/bundle/*' -type f \( -name '*.exe' -o -name '*.msi' -o -name '*.dmg' \))
+          ls -l release-assets
+
+      - uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: release-assets/*
 
       - uses: actions/upload-artifact@v4
         if: ${{ !startsWith(github.ref, 'refs/tags/') }}
         with:
           name: installers-${{ matrix.platform }}
-          path: apps/desktop/src-tauri/target/**/release/bundle/*/*
+          path: release-assets/*
           if-no-files-found: error
