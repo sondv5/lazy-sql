@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>LAZY SQL</title>
+<style>
+  :root {
+    --purple: #4d6ae0; --purple-deep: #4059c9; --purple-soft: #eef1fc; --purple-border: #ccd5f5;
+    --ink: #111827; --muted: #6b7280; --line: #e7e6ee; --bg: #fafafc; --card: #fff;
+    --ok-bg: #e7f6ec; --ok: #16794a; --warn-bg: #fff4e5; --warn: #b45309; --err-bg: #fdecec; --err: #b3261e;
+    --mono: ui-monospace, "Cascadia Code", Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.55 "Segoe UI", system-ui, -apple-system, sans-serif; }
+  .top { background: var(--purple); color: #fff; padding: 14px 24px; display: flex; align-items: center; gap: 10px; }
+  .top .ghost { width: 22px; height: 22px; }
+  .top b { font-size: 14px; letter-spacing: .2px; }
+  .top .pill { margin-left: auto; background: rgba(255,255,255,.18); padding: 3px 10px; border-radius: 999px; font-size: 11px; }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 24px 24px 60px; }
+  .crumb { color: var(--purple); font-size: 11px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; }
+  h1 { font-size: 24px; margin: 6px 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 20px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; margin-bottom: 12px; box-shadow: 0 1px 2px rgba(17,24,39,.04); }
+  .row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .grow { flex: 1; min-width: 200px; }
+  .name { font-weight: 600; }
+  .target { font-family: var(--mono); font-size: 12px; color: var(--muted); margin-top: 2px; word-break: break-all; }
+  .chip { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 600; background: var(--purple-soft); color: var(--purple-deep); border: 1px solid var(--purple-border); }
+  .chip.gray { background: #f3f4f6; color: #4b5563; border-color: #e5e7eb; }
+  .chip.ok { background: var(--ok-bg); color: var(--ok); border-color: #bfe6cd; }
+  .chip.warn { background: var(--warn-bg); color: var(--warn); border-color: #f3d9b4; }
+  .chip.err { background: var(--err-bg); color: var(--err); border-color: #f2c6c3; }
+  button { border: 1px solid var(--line); background: #fff; color: var(--ink); border-radius: 9px; padding: 7px 14px; font-size: 13px; font-weight: 600; cursor: pointer; }
+  button:hover { background: #f7f7fa; }
+  button.primary { background: var(--purple); border-color: var(--purple); color: #fff; }
+  button.primary:hover { background: var(--purple-deep); }
+  button.danger { color: var(--err); }
+  button.small { padding: 4px 10px; font-size: 12px; }
+  input, select, textarea { border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; font-size: 13px; width: 100%; background: #fff; color: var(--ink); }
+  label { font-size: 12px; font-weight: 600; color: #4b5563; display: block; margin: 10px 0 4px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
+  pre.sql, code { font-family: var(--mono); }
+  pre.sql { background: #f8f8fb; border: 1px solid var(--line); border-radius: 10px; padding: 12px; font-size: 12.5px; white-space: pre-wrap; word-break: break-word; }
+  .hidden { display: none !important; }
+  .banner { background: var(--purple-soft); border: 1px solid var(--purple-border); color: #2b3a8c; border-radius: 12px; padding: 12px 16px; margin-bottom: 16px; font-size: 13px; }
+  .muted { color: var(--muted); font-size: 12.5px; }
+  .kv { font-size: 12.5px; color: var(--muted); }
+  .kv b { color: var(--ink); font-weight: 600; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th, td { border-bottom: 1px solid var(--line); padding: 6px 8px; text-align: left; vertical-align: top; }
+  th { background: #f8f8fb; font-weight: 600; }
+  td { font-family: var(--mono); word-break: break-word; }
+  .toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: #111827; color: #fff; padding: 9px 16px; border-radius: 10px; font-size: 13px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+  <div class="top">
+    <svg class="ghost" viewBox="0 0 64 64" fill="none"><path d="M13.6 29.8 L13.6 60.5 L43.8 60.5 L36.9 40.2 L35.6 33.6 Z" fill="#fff"/><path d="M14.5 5.5 L10.5 26.5 Q10.3 30.9 12.4 31.6 L34.8 33.5 L35.6 33.6 L47.9 27.8 L46.2 9.5 Q30 17 14.5 5.5 Z" fill="#fff"/><rect x="16" y="19.2" width="3" height="5.4" rx="1.3" fill="#1f2b57"/><rect x="24.2" y="19.2" width="3" height="5.4" rx="1.3" fill="#1f2b57"/><path d="M41.5 51.5 C 44 57.8 49.8 60.8 55.2 58.8 C 60.4 56.8 61.9 49.2 58.7 44 C 56.3 40 51.3 38.6 47.7 40.2" stroke="#fff" stroke-width="4.6" fill="none" stroke-linecap="round"/></svg>
+    <b>LAZY SQL</b>
+    <span class="pill" id="modePill">browser mode</span>
+  </div>
+  <div class="wrap">
+    <div class="banner" id="appBanner">
+      Desktop app not running — this is the browser fallback. Open the app for history, MCP toggles and the full review dialog.
+      <button class="small" id="launchBtn" style="margin-left:10px">Open the app</button>
+    </div>
+    <div id="view"></div>
+  </div>
+  <div class="toast" id="toast"></div>
+<script>
+(() => {
+  const params = new URLSearchParams(location.search);
+  const token = params.get('t') || '';
+  const path = location.pathname;
+  const $view = document.getElementById('view');
+
+  const ENGINE_COLORS = { postgres: '#3b82f6', mysql: '#0ea5e9', mssql: '#6366f1', sqlite: '#10b981' };
+
+  function esc(text) {
+    return String(text ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+  async function api(pathname, options = {}) {
+    const response = await fetch(pathname + (pathname.includes('?') ? '&' : '?') + 't=' + encodeURIComponent(token), {
+      headers: { 'content-type': 'application/json' },
+      ...options,
+      body: options.body ? JSON.stringify(options.body) : undefined
+    });
+    const text = await response.text();
+    let data = null;
+    try { data = text ? JSON.parse(text) : null; } catch { data = { error: text }; }
+    if (!response.ok) throw new Error(data?.error || response.statusText);
+    return data;
+  }
+  let toastTimer;
+  function toast(message) {
+    const el = document.getElementById('toast');
+    el.textContent = message;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
+  }
+
+  function statusChip(status) {
+    const map = { ok: 'ok', blocked: 'warn', rejected: 'err', review_timeout: 'warn', error: 'err' };
+    return '<span class="chip ' + (map[status] || 'gray') + '">' + esc(status) + '</span>';
+  }
+  function engineChip(engine) {
+    return '<span class="chip gray"><span style="width:7px;height:7px;border-radius:50%;background:' + (ENGINE_COLORS[engine] || '#888') + ';display:inline-block"></span>' + esc(engine) + '</span>';
+  }
+
+  // ---------------- config view ----------------
+  let connections = [];
+  let editing = null;
+
+  async function renderConfig() {
+    const payload = await api('/api/connections');
+    connections = payload.connections || [];
+    const draft = params.get('name') || '';
+    $view.innerHTML = `
+      <div class="crumb">Manage</div>
+      <h1>Database connections</h1>
+      <p class="sub">${connections.length} connection(s) configured. Enabled + read-only are honored by the MCP server per connection.</p>
+      <div class="card" id="formCard">
+        <div class="row"><b class="grow" id="formTitle">Add a connection</b>
+          <button class="small" id="resetForm">Clear</button></div>
+        <div class="grid">
+          <div><label>Name</label><input id="f_name" value="${esc(draft)}" placeholder="staging-db" /></div>
+          <div><label>Engine</label><select id="f_engine">
+            <option value="postgres">PostgreSQL</option><option value="mysql">MySQL / MariaDB</option>
+            <option value="mssql">SQL Server</option><option value="sqlite">SQLite</option></select></div>
+          <div><label>Host</label><input id="f_host" placeholder="localhost" /></div>
+          <div><label>Port</label><input id="f_port" placeholder="5432" /></div>
+          <div><label>Database</label><input id="f_database" /></div>
+          <div><label>User</label><input id="f_user" /></div>
+          <div><label>Password</label><input id="f_password" type="password" placeholder="leave empty to keep / use \${ENV_VAR}" /></div>
+          <div><label>SQLite file</label><input id="f_file" placeholder="D:\\data\\app.db" /></div>
+        </div>
+        <div class="row" style="margin-top:12px">
+          <label style="margin:0"><input type="checkbox" id="f_ssl" style="width:auto" /> SSL</label>
+          <label style="margin:0"><input type="checkbox" id="f_readOnly" style="width:auto" /> Read-only</label>
+          <label style="margin:0"><input type="checkbox" id="f_enabled" style="width:auto" checked /> Enabled</label>
+          <span class="grow"></span>
+          <button id="testDraft">Test</button>
+          <button class="primary" id="saveDraft">Save connection</button>
+        </div>
+        <div class="muted" id="formHint" style="margin-top:8px"></div>
+      </div>
+      <div id="list"></div>`;
+    renderList();
+    wireForm();
+  }
+
+  function renderList() {
+    const list = document.getElementById('list');
+    if (!connections.length) {
+      list.innerHTML = '<div class="card muted">No connections yet — add one above.</div>';
+      return;
+    }
+    list.innerHTML = connections.map((c) => `
+      <div class="card">
+        <div class="row">
+          <div class="grow">
+            <div class="name">${esc(c.name)} ${c.readOnly ? '<span class="chip warn" style="margin-left:6px">read-only</span>' : ''} ${c.enabled === false ? '<span class="chip gray" style="margin-left:6px">disabled</span>' : ''}</div>
+            <div class="target">${esc(c.engine === 'sqlite' ? c.file : (c.host + ':' + c.port + '/' + c.database))}</div>
+          </div>
+          ${engineChip(c.engine)}
+          <span class="muted">${c.hasPassword ? 'password saved' : 'no password'}</span>
+          <button class="small" data-test="${esc(c.id)}">Test</button>
+          <button class="small" data-edit="${esc(c.id)}">Edit</button>
+          <button class="small danger" data-delete="${esc(c.id)}">Delete</button>
+        </div>
+      </div>`).join('');
+    list.querySelectorAll('[data-test]').forEach((el) => el.addEventListener('click', async () => {
+      el.disabled = true; el.textContent = 'Testing…';
+      try { const r = await api('/api/connections/' + el.dataset.test + '/test', { method: 'POST' }); toast(r.ok ? 'OK — ' + (r.serverVersion || '').slice(0, 60) : 'Failed: ' + r.error); }
+      catch (e) { toast('Test failed: ' + e.message); }
+      el.disabled = false; el.textContent = 'Test';
+    }));
+    list.querySelectorAll('[data-edit]').forEach((el) => el.addEventListener('click', () => {
+      const connection = connections.find((c) => c.id === el.dataset.edit);
+      if (!connection) return;
+      editing = connection;
+      document.getElementById('formTitle').textContent = 'Edit ' + connection.name;
+      for (const key of ['name', 'engine', 'host', 'port', 'database', 'user', 'file']) {
+        const input = document.getElementById('f_' + key);
+        if (input) input.value = connection[key] ?? '';
+      }
+      document.getElementById('f_password').value = '';
+      document.getElementById('f_ssl').checked = Boolean(connection.ssl);
+      document.getElementById('f_readOnly').checked = Boolean(connection.readOnly);
+      document.getElementById('f_enabled').checked = connection.enabled !== false;
+      document.getElementById('formHint').textContent = 'Editing "' + connection.name + '" — leave the password empty to keep the saved one.';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }));
+    list.querySelectorAll('[data-delete]').forEach((el) => el.addEventListener('click', async () => {
+      if (!confirm('Delete this connection?')) return;
+      try { await api('/api/connections/' + el.dataset.delete, { method: 'DELETE' }); toast('Deleted'); renderConfig(); }
+      catch (e) { toast('Delete failed: ' + e.message); }
+    }));
+  }
+
+  function formBody() {
+    const body = {
+      name: document.getElementById('f_name').value.trim(),
+      engine: document.getElementById('f_engine').value,
+      host: document.getElementById('f_host').value.trim(),
+      port: Number(document.getElementById('f_port').value) || undefined,
+      database: document.getElementById('f_database').value.trim(),
+      user: document.getElementById('f_user').value.trim(),
+      file: document.getElementById('f_file').value.trim(),
+      ssl: document.getElementById('f_ssl').checked,
+      readOnly: document.getElementById('f_readOnly').checked,
+      enabled: document.getElementById('f_enabled').checked
+    };
+    const password = document.getElementById('f_password').value;
+    if (password) body.password = password;
+    if (editing) body.id = editing.id;
+    return body;
+  }
+
+  function wireForm() {
+    document.getElementById('resetForm').addEventListener('click', () => { editing = null; renderConfig(); });
+    document.getElementById('testDraft').addEventListener('click', async (event) => {
+      const button = event.currentTarget; button.disabled = true; button.textContent = 'Testing…';
+      try { const r = await api('/api/connections/test', { method: 'POST', body: formBody() }); toast(r.ok ? 'OK — ' + (r.serverVersion || '').slice(0, 60) : 'Failed: ' + r.error); }
+      catch (e) { toast('Test failed: ' + e.message); }
+      button.disabled = false; button.textContent = 'Test';
+    });
+    document.getElementById('saveDraft').addEventListener('click', async () => {
+      try { await api('/api/connections', { method: 'POST', body: formBody() }); toast('Saved'); editing = null; renderConfig(); }
+      catch (e) { toast('Save failed: ' + e.message); }
+    });
+  }
+
+  // ---------------- history view ----------------
+  async function renderHistory() {
+    const { dates } = await api('/api/logs/dates');
+    const selected = params.get('date') || (dates[0]?.date ?? new Date().toISOString().slice(0, 10));
+    let entries = [];
+    if (/^\d{4}-\d{2}-\d{2}$/.test(selected)) {
+      try { entries = (await api('/api/logs?date=' + selected)).entries || []; } catch { entries = []; }
+    }
+    $view.innerHTML = `
+      <div class="crumb">Execution history</div>
+      <h1>Logs — ${esc(selected)}</h1>
+      <p class="sub">Every execute_sql run (auto-run reads, approved writes, rejections) is logged locally. Full-featured history lives in the desktop app.</p>
+      <div class="card row" style="gap:8px">
+        ${dates.slice(0, 14).map((d) => `<button class="small ${d.date === selected ? 'primary' : ''}" data-date="${d.date}">${d.date} (${d.count})</button>`).join('') || '<span class="muted">No logs yet.</span>'}
+      </div>
+      ${entries.map((entry) => `
+        <div class="card">
+          <div class="row">
+            <span class="muted">${esc(new Date(entry.ts).toLocaleTimeString())}</span>
+            <b>${esc(entry.connection?.name ?? '—')}</b>
+            ${statusChip(entry.status)}
+            <span class="chip gray">${esc(entry.statementTypes ?? '')}</span>
+            <span class="grow"></span>
+            <span class="muted">${entry.durationMs != null ? entry.durationMs + ' ms' : ''} ${entry.rowsReturned != null ? entry.rowsReturned + ' rows' : ''}</span>
+          </div>
+          <pre class="sql">${esc(entry.sql ?? '')}</pre>
+          ${entry.message ? '<div class="kv"><b>Message:</b> ' + esc(entry.message) + '</div>' : ''}
+        </div>`).join('') || '<div class="card muted">No entries for this date.</div>'}`;
+    $view.querySelectorAll('[data-date]').forEach((el) => el.addEventListener('click', () => {
+      history.replaceState(null, '', '?t=' + encodeURIComponent(token) + '&date=' + el.dataset.date);
+      renderHistory();
+    }));
+  }
+
+  // ---------------- review view ----------------
+  async function renderReview() {
+    const reviewId = path.split('/').filter(Boolean)[1];
+    const review = await api('/api/reviews/' + reviewId);
+    const analysis = review.analysis || {};
+    const connection = review.connection || {};
+    $view.innerHTML = `
+      <div class="crumb">Review · ${esc(connection.name ?? '')}</div>
+      <h1>${analysis.dangerous ? 'Confirm data change' : 'Confirm SQL'}</h1>
+      <p class="sub">${esc(connection.engine ?? '')} — ${esc(connection.engine === 'sqlite' ? connection.file : (connection.host || '') + ':' + (connection.port || '') + '/' + (connection.database || ''))}</p>
+      ${analysis.dangerous ? '<div class="banner" style="background:#fff4e5;border-color:#f3d9b4;color:#92400e">This statement modifies data or schema. Review it carefully before running.</div>' : ''}
+      <div class="card">
+        <div class="row">${(analysis.keywords || []).map((k) => '<span class="chip">' + esc(k) + '</span>').join('')}
+          <span class="grow"></span><span class="muted" id="countdown"></span></div>
+        ${review.purpose ? '<div class="kv" style="margin-top:8px"><b>Purpose:</b> ' + esc(review.purpose) + '</div>' : ''}
+        <label>SQL (editable)</label>
+        <textarea id="sqlBox" rows="8" spellcheck="false">${esc(review.sql)}</textarea>
+        ${review.params?.length ? '<label>Params</label><pre class="sql">' + esc(JSON.stringify(review.params)) + '</pre>' : ''}
+        <div class="row" style="margin-top:12px">
+          <span class="grow"></span>
+          <button id="rejectBtn">Reject</button>
+          <button class="primary" id="runBtn">Run query</button>
+        </div>
+      </div>
+      <div id="result"></div>`;
+    document.getElementById('runBtn').addEventListener('click', () => decide('approve'));
+    document.getElementById('rejectBtn').addEventListener('click', () => decide('reject'));
+    if (review.status === 'pending') startCountdown(review.expiresAt);
+    else poll();
+
+    async function decide(action) {
+      try {
+        if (action === 'approve') {
+          await api('/api/reviews/' + reviewId + '/approve', { method: 'POST', body: { sql: document.getElementById('sqlBox').value } });
+        } else {
+          await api('/api/reviews/' + reviewId + '/reject', { method: 'POST' });
+        }
+        poll();
+      } catch (e) { toast(e.message); }
+    }
+
+    let countdownTimer;
+    function startCountdown(expiresAt) {
+      const el = document.getElementById('countdown');
+      clearInterval(countdownTimer);
+      countdownTimer = setInterval(() => {
+        const left = Math.max(0, Number(expiresAt) - Date.now());
+        el.textContent = left > 0 ? 'expires in ' + Math.ceil(left / 1000) + 's' : 'expired';
+        if (left <= 0) {
+          clearInterval(countdownTimer);
+          setTimeout(() => window.close(), 1500);
+        }
+      }, 500);
+    }
+
+    async function poll() {
+      try {
+        const fresh = await api('/api/reviews/' + reviewId);
+        const box = document.getElementById('result');
+        if (fresh.status === 'done') {
+          clearInterval(countdownTimer);
+          box.innerHTML = '<div class="card"><div class="row">' + statusChip('ok') + '<b>Executed</b><span class="grow"></span>' +
+            '<span class="muted">' + (fresh.result?.durationMs ?? '') + ' ms · ' + (fresh.result?.rowsReturned ?? 0) + ' rows</span></div>' +
+            (fresh.result?.resultSets || []).map((set) => set.columns.length ? renderSet(set) : '<div class="kv">' + esc(set.notice || set.command) + ' · ' + set.rowCount + ' affected</div>').join('') + '</div>';
+          document.querySelectorAll('#runBtn, #rejectBtn').forEach((button) => (button.disabled = true));
+        } else if (fresh.status === 'error') {
+          clearInterval(countdownTimer);
+          box.innerHTML = '<div class="card"><div class="row">' + statusChip('error') + '<b>Execution failed</b></div><pre class="sql">' + esc(fresh.error) + '</pre></div>';
+        } else if (fresh.status === 'rejected' || fresh.status === 'timeout') {
+          clearInterval(countdownTimer);
+          box.innerHTML = '<div class="card">' + statusChip(fresh.status === 'timeout' ? 'review_timeout' : 'rejected') + ' Nothing was executed. This tab can be closed.</div>';
+          // the tab is not always script-opened, so closing may be ignored — the message above covers that
+          setTimeout(() => window.close(), 1500);
+        } else if (fresh.status === 'running' || fresh.status === 'approved') {
+          box.innerHTML = '<div class="card muted">Executing…</div>';
+          setTimeout(poll, 600);
+        }
+      } catch (e) { toast(e.message); }
+    }
+
+    function renderSet(set) {
+      const head = '<tr>' + set.columns.map((c) => '<th>' + esc(c) + '</th>').join('') + '</tr>';
+      const rows = set.rows.slice(0, 200).map((row) => '<tr>' + row.map((cell) => '<td>' + esc(cell === null ? '' : cell) + '</td>').join('') + '</tr>').join('');
+      return '<div style="margin-top:10px;overflow:auto"><table>' + head + rows + '</table></div>' +
+        (set.truncated ? '<div class="muted">… ' + (set.rowsOmitted || '') + ' row(s) omitted</div>' : '');
+    }
+  }
+
+  document.getElementById('launchBtn').addEventListener('click', async () => {
+    try { const r = await api('/api/desktop/launch', { method: 'POST', body: {} }); toast(r.launched ? 'Launching LAZY SQL…' : 'Could not launch: ' + (r.reason || 'no path configured')); }
+    catch (e) { toast(e.message); }
+  });
+
+  (async () => {
+    try {
+      if (path.startsWith('/review/')) { document.getElementById('modePill').textContent = 'review'; await renderReview(); }
+      else if (path.startsWith('/history')) { document.getElementById('modePill').textContent = 'history'; await renderHistory(); }
+      else { document.getElementById('modePill').textContent = 'connections'; await renderConfig(); }
+    } catch (error) {
+      $view.innerHTML = '<div class="card"><b>Error</b><pre class="sql">' + esc(error.message) + '</pre></div>';
+    }
+  })();
+})();
+</script>
+</body>
+</html>

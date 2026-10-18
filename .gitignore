@@ -1,0 +1,17 @@
+node_modules/
+dist/
+target/
+*.log
+.DS_Store
+Thumbs.db
+*.local
+shots/
+
+# engine runtime data (connections with passwords, logs, instances)
+engine/data/
+engine/.data/
+
+# tauri
+apps/desktop/src-tauri/target/
+apps/desktop/src-tauri/gen/schemas/
+apps/desktop/src-tauri/resources/*.mjs

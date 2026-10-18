@@ -1,0 +1,255 @@
+/* review dialog window */
+
+.review-root {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 14px;
+  border: 1px solid rgba(17, 24, 39, 0.1);
+  overflow: hidden;
+  margin: 0;
+}
+
+.review-titlebar {
+  height: 40px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px 0 14px;
+  background: #fff;
+}
+
+.review-titlebar .drag-zone {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 640;
+  color: var(--faint);
+}
+
+.review-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 22px 16px;
+}
+
+.review-footer {
+  flex: none;
+  padding: 12px 22px 16px;
+  border-top: 1px solid var(--line-soft);
+  background: #fdfdfe;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.review-footer .countdown {
+  flex: 1;
+  min-width: 0;
+}
+.countdown-label {
+  font-size: 11.5px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.countdown-track {
+  height: 4px;
+  border-radius: 999px;
+  background: #efeef5;
+  margin-top: 6px;
+  overflow: hidden;
+}
+.countdown-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #7d95ee, #4d6ae0);
+  transition: width 0.5s linear;
+}
+.countdown-fill.danger {
+  background: linear-gradient(90deg, #f87171, #dc2626);
+}
+
+.review-banner {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  margin: 2px 0 14px;
+}
+.review-banner.warn {
+  background: var(--warn-bg);
+  border: 1px solid var(--warn-border);
+  color: #92400e;
+}
+.review-banner.danger {
+  background: var(--err-bg);
+  border: 1px solid var(--err-border);
+  color: #991b1b;
+}
+.review-banner b {
+  font-weight: 700;
+}
+
+.review-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0 14px;
+}
+
+.editor-card {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fdfdfe;
+  overflow: hidden;
+}
+.editor-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--line-soft);
+  background: #fff;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.editor-toolbar .grow {
+  flex: 1;
+}
+.editor-host {
+  background: #fff;
+}
+
+/* SQL editor view: connection bar + editor header */
+.query-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.query-bar-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.query-bar-select {
+  flex: 1 1 280px;
+  min-width: 180px;
+  max-width: 380px;
+}
+.query-bar-main .btn {
+  flex: none;
+  white-space: nowrap;
+}
+.conn-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.conn-meta:empty {
+  display: none;
+}
+.conn-meta .conn-target {
+  min-width: 0;
+}
+.conn-meta .chip,
+.conn-meta .engine-dot {
+  flex: none;
+}
+.query-toolbar .icon-btn {
+  width: 26px;
+  height: 26px;
+}
+
+.params-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.param-chip {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  background: #f4f4f8;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 2px 7px;
+  color: var(--ink-2);
+}
+
+.result-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 10px;
+}
+
+.result-set {
+  margin-top: 10px;
+}
+
+.status-panel {
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin: 4px 0 12px;
+  font-size: 13px;
+}
+.status-panel.ok {
+  background: var(--ok-bg);
+  border: 1px solid var(--ok-border);
+  color: #14532d;
+}
+.status-panel.error {
+  background: var(--err-bg);
+  border: 1px solid var(--err-border);
+  color: #7f1d1d;
+}
+.status-panel.neutral {
+  background: var(--bg-soft);
+  border: 1px solid var(--line);
+  color: var(--ink-2);
+}
+
+.executing {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--purple-deep);
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid #ccd5f5;
+  border-top-color: #4d6ae0;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.run-btn {
+  min-width: 130px;
+}

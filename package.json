@@ -1,0 +1,22 @@
+{
+  "name": "lazy-sql",
+  "private": true,
+  "version": "0.1.0",
+  "description": "LAZY SQL — reviewed SQL execution MCP for AI coding tools (OpenCode, Claude Code, Kiro, Cursor) with a lightweight Tauri desktop companion for connections, logs and workspace toggles.",
+  "workspaces": [
+    "engine",
+    "apps/desktop"
+  ],
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "dev:app": "npm run bundle --workspace engine && npm run tauri:dev --workspace apps/desktop",
+    "serve": "node engine/src/index.js --serve",
+    "bundle": "npm run bundle --workspace engine",
+    "build": "npm run bundle --workspace engine && npm run build --workspace apps/desktop",
+    "build:app": "npm run bundle --workspace engine && npm run build --workspace apps/desktop && npm run tauri:build --workspace apps/desktop",
+    "test": "npm test --workspace engine"
+  }
+}

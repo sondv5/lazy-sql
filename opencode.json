@@ -1,0 +1,13 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "skills": {
+    "paths": [".cursor/skills"]
+  },
+  "mcp": {
+    "browser": {
+      "type": "local",
+      "command": ["npx", "-y", "@sondv5/browser-mcp@latest", "--port", "8787", "--extension-id", "ieijpbldkdjgncbbjndoolkkgaamlocl"],
+      "enabled": true
+    }
+  }
+}

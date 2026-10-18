@@ -1,0 +1,32 @@
+{
+  "name": "lazy-sql-engine",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "LAZY SQL engine: local MCP server (stdio) + local HTTP API with reviewed SQL execution, execution logs and workspace/MCP management.",
+  "main": "src/index.js",
+  "bin": {
+    "lazy-sql": "./src/index.js"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "serve": "node src/index.js --serve",
+    "bundle": "node scripts/bundle.mjs",
+    "test": "node test/unit.mjs && node test/smoke.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "express": "^5.3.0",
+    "jsonc-parser": "^3.3.1",
+    "mssql": "^12.7.4",
+    "mysql2": "^3.24.5",
+    "pg": "^8.23.1",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  }
+}
