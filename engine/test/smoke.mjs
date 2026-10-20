@@ -211,6 +211,16 @@ async function main() {
   assert.ok(schemaResponse.body.schema.users.includes('email'));
   step('exposes a completion schema for the SQL editor');
 
+  const objectsResponse = await api('/api/objects?connection=test-sqlite&limit=50');
+  assert.equal(objectsResponse.status, 200);
+  assert.equal(objectsResponse.body.mode, 'list');
+  assert.ok(objectsResponse.body.objects.some((object) => object.kind === 'table' && object.name === 'users'));
+  const objectDetailResponse = await api('/api/objects/detail?connection=test-sqlite&name=users&definition=1');
+  assert.equal(objectDetailResponse.body.found, true);
+  assert.deepEqual(objectDetailResponse.body.object.columns.map((column) => column.name), ['id', 'name', 'email']);
+  assert.ok(objectDetailResponse.body.object.definition.includes('CREATE TABLE'));
+  step('object browser endpoints list objects and return table details');
+
   const marker1 = stderrLines.length;
   const directRead = parseToolResult(
     await client.callTool(
@@ -400,7 +410,12 @@ async function main() {
   assert.ok(manualEntries.some((entry) => entry.status === 'blocked'));
   assert.ok(manualEntries.some((entry) => entry.status === 'ok'));
   assert.equal((await api('/api/logs?date=not-a-date')).status, 400);
-  step('execution history is logged locally and queryable by date');
+  const recentHistory = await api('/api/history?limit=10&connection=test-sqlite');
+  assert.equal(recentHistory.status, 200);
+  assert.ok(recentHistory.body.entries.length > 0);
+  assert.ok(recentHistory.body.entries.every((entry) => entry.connection?.name === 'test-sqlite'));
+  assert.equal('responsePreview' in recentHistory.body.entries[0], false, 'history omits response previews');
+  step('execution history is logged locally and queryable by date and by recent history');
 
   const exported = await api('/api/transfer/export?passwords=0');
   assert.equal(exported.body.payload.kind, 'config-export');

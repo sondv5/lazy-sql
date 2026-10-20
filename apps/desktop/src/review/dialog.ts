@@ -174,8 +174,10 @@ export function mountReviewApp(root: HTMLElement, base: string, token: string, r
       rejectBtn.disabled = true;
       try {
         await decideReview(base, token, reviewId, 'approve', sql);
-        showExecuting();
-        pollUntilResolved();
+        // The decision is now owned by the engine session: it runs the SQL and returns the result
+        // to the agent. There is nothing left for this dialog to show, so close it right away.
+        stopTimers();
+        await hideReviewWindow();
       } catch (error) {
         toast((error as Error).message, 'error');
         runBtn.disabled = false;

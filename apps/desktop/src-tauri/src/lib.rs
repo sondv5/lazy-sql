@@ -243,37 +243,37 @@ async fn ensure_engine(app: AppHandle, state: tauri::State<'_, EngineState>) -> 
     Err("The LAZY SQL engine started but did not report ready in time.".to_string())
 }
 
+/// The main window is built in code (not in tauri.conf.json) so dialog mode can start with
+/// no main window at all. A configured window would be created for every process — including
+/// `--review` — and show the app shell next to the review window.
+fn build_main_window(app: &AppHandle) -> Result<tauri::WebviewWindow, String> {
+    WebviewWindowBuilder::new(app, "main", WebviewUrl::default())
+        .title("LAZY SQL")
+        .inner_size(1180.0, 780.0)
+        .min_inner_size(940.0, 600.0)
+        .center()
+        .decorations(false)
+        .transparent(true)
+        .shadow(true)
+        .resizable(true)
+        .visible(true)
+        .build()
+        .map_err(|error| error.to_string())
+}
+
 fn build_review_window(app: &AppHandle, query: &str) -> Result<tauri::WebviewWindow, String> {
-    let mut builder = WebviewWindowBuilder::new(app, "review", WebviewUrl::App(query.into()))
+    WebviewWindowBuilder::new(app, "review", WebviewUrl::App(query.into()))
         .title("LAZY SQL — Review")
         .inner_size(720.0, 800.0)
         .min_inner_size(540.0, 460.0)
         .decorations(false)
         .transparent(true)
-        .always_on_top(true)
         .skip_taskbar(true)
         .resizable(true)
-        .visible(false);
-
-    // Dock to the right edge, below the titlebar strip, so the main window's
-    // header stays visible and draggable while a review is open.
-    match app.primary_monitor() {
-        Ok(Some(monitor)) => {
-            let area = monitor.work_area();
-            let scale = monitor.scale_factor();
-            let width = 720.0 * scale;
-            let margin = 24.0 * scale;
-            let top = 52.0 * scale;
-            let x = area.position.x as f64 + area.size.width as f64 - width - margin;
-            let y = area.position.y as f64 + top;
-            builder = builder.position(x / scale, y / scale);
-        }
-        _ => {
-            builder = builder.center();
-        }
-    }
-
-    builder.build().map_err(|error| error.to_string())
+        .center()
+        .visible(false)
+        .build()
+        .map_err(|error| error.to_string())
 }
 
 #[tauri::command]
@@ -396,6 +396,8 @@ pub fn run() {
             reveal_path
         ])
         .setup(|app| {
+            build_main_window(app.handle())?;
+
             let show_item = MenuItemBuilder::with_id("show", "Show LAZY SQL").build(app)?;
             let quit_item = MenuItemBuilder::with_id("quit", "Quit").build(app)?;
             let menu = MenuBuilder::new(app)

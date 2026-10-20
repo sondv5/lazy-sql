@@ -286,7 +286,11 @@ async function listObjects(materialized, objectType, filter, limit) {
   if (objectType !== 'all') filtered = filtered.filter((object) => object.kind === objectType);
   if (filter) {
     const needle = String(filter).toLowerCase();
-    filtered = filtered.filter((object) => String(object.name).toLowerCase().includes(needle));
+    filtered = filtered.filter((object) => {
+      const name = String(object.name ?? '').toLowerCase();
+      const schema = String(object.schema ?? '').toLowerCase();
+      return name.includes(needle) || schema.includes(needle) || `${schema}.${name}`.includes(needle);
+    });
   }
   filtered.sort((a, b) => String(a.schema).localeCompare(String(b.schema)) || String(a.name).localeCompare(String(b.name)));
   return {

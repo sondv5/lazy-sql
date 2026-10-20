@@ -2,9 +2,6 @@ import { h, svgIcon, chip, toast, openModal, confirmDialog, copyText, engineDot,
 import type { AppContext, View } from '../lib/context';
 import { crumb } from '../lib/context';
 import type { WorkspaceScan, WorkspaceToolState } from '../lib/engine';
-import { pickFolder } from '../lib/tauri';
-
-type ScopeType = 'user' | 'workspace';
 
 // a registration that is really in effect: present, switched on and readable
 function isActive(tool: WorkspaceToolState | undefined): boolean {
@@ -22,6 +19,19 @@ export function createWorkspacesView(ctx: AppContext): View {
   // tools whose registration changed in this session: they only read MCP settings when they start
   const restartNeeded = new Set<string>();
   const container = h('div');
+  const listHost = h('div');
+  let filterText = '';
+
+  const filterInput = h('input', {
+    class: 'input',
+    type: 'search',
+    placeholder: 'Filter tools…',
+    'aria-label': 'Filter AI tools'
+  }) as HTMLInputElement;
+  filterInput.addEventListener('input', () => {
+    filterText = filterInput.value;
+    renderToolList();
+  });
 
   // Saved selections hold connection ids (or names from older registrations); null means "all connections".
   function restoreConnections(saved: string[] | null): string[] | null {
@@ -90,14 +100,10 @@ export function createWorkspacesView(ctx: AppContext): View {
 
   /* ---------- tool row ---------- */
 
-  function renderToolRow(scopeType: ScopeType, scopePath: string | null, toolKey: string, label: string, tool: WorkspaceToolState): HTMLElement {
-    const key = `${scopeType}:${scopePath ?? 'user'}:${toolKey}`;
+  function renderToolRow(toolKey: string, label: string, tool: WorkspaceToolState): HTMLElement {
+    const key = `user:${toolKey}`;
     const active = isActive(tool);
     const isOpen = active && expanded.has(key);
-
-    const globalTool = scopeType === 'workspace' ? scan?.user[toolKey] : undefined;
-    const alsoGlobal = scopeType === 'workspace' && active && isActive(globalTool);
-    const overriddenIn = scopeType === 'user' && active ? (scan?.workspaces.filter((workspace) => isActive(workspace.tools[toolKey])).length ?? 0) : 0;
 
     const restoreHint = !tool.registered && tool.desired ? ` (restores: ${describeConnections(tool.desired.connections, tool.desired.forceReadOnly)})` : '';
     const toggleInput = h('input', {
@@ -131,15 +137,31 @@ export function createWorkspacesView(ctx: AppContext): View {
           ).then((ok) => {
             if (!ok) return;
             applySettings(
-              { action: 'apply', scopeType, scopePath, tool: toolKey, enabled: true, connections: null, forceReadOnly: restoredForce },
+              { action: 'apply', scopeType: 'user', scopePath: null, tool: toolKey, enabled: true, connections: null, forceReadOnly: restoredForce },
               `LAZY SQL registered in ${label}`
             );
           });
           return;
         }
       }
+      if (next && connections !== null && connections.length === 0) {
+        // A registration written by an older build can hold an allow-list whose connections are gone.
+        toggleInput.checked = false;
+        const keptForceReadOnly = forceReadOnly;
+        void confirmDialog(
+          `The saved connection scope for ${label} is empty. Register it for all connections instead? You can narrow it down afterwards with Configure.`,
+          { title: 'Empty connection scope', confirmLabel: 'Register for all connections', danger: true }
+        ).then((ok) => {
+          if (!ok) return;
+          applySettings(
+            { action: 'apply', scopeType: 'user', scopePath: null, tool: toolKey, enabled: true, connections: null, forceReadOnly: keptForceReadOnly },
+            `LAZY SQL registered in ${label}`
+          );
+        });
+        return;
+      }
       applySettings(
-        { action: 'apply', scopeType, scopePath, tool: toolKey, enabled: next, connections, forceReadOnly },
+        { action: 'apply', scopeType: 'user', scopePath: null, tool: toolKey, enabled: next, connections, forceReadOnly },
         next ? `LAZY SQL registered in ${label}` : `LAZY SQL removed from ${label}`
       );
     });
@@ -150,16 +172,6 @@ export function createWorkspacesView(ctx: AppContext): View {
       if ((tool.unknownConnections?.length ?? 0) > 0) chips.push(chip(`${tool.unknownConnections.length} missing`, 'warn'));
       if (tool.forceReadOnly) chips.push(chip('force read-only', 'warn'));
     }
-    if (alsoGlobal) {
-      const dup = chip('Also in All projects', 'warn');
-      dup.title = 'Registered here and for all projects. Open Configure for details.';
-      chips.push(dup);
-    }
-    if (overriddenIn > 0) {
-      const over = chip(`Overridden in ${overriddenIn} project${overriddenIn === 1 ? '' : 's'}`, 'ghost');
-      over.title = 'Those project folders have their own registration, which usually takes precedence.';
-      chips.push(over);
-    }
 
     const actions: HTMLElement[] = [];
     if (tool.registered && tool.needsUpdate && !tool.parseError) {
@@ -169,10 +181,22 @@ export function createWorkspacesView(ctx: AppContext): View {
         title: `Point this registration at the engine of this app${tool.registeredEntry ? ` (now: ${tool.registeredEntry})` : ''}`
       });
       updateBtn.addEventListener('click', () => {
-        applySettings(
-          { action: 'apply', scopeType, scopePath, tool: toolKey, enabled: true, connections: tool.connections, forceReadOnly: tool.forceReadOnly },
-          `${label} registration updated`
-        );
+        const applyUpdate = (connections: string[] | null): void => {
+          applySettings(
+            { action: 'apply', scopeType: 'user', scopePath: null, tool: toolKey, enabled: true, connections, forceReadOnly: tool.forceReadOnly },
+            `${label} registration updated`
+          );
+        };
+        if (tool.connections !== null && tool.connections.length === 0) {
+          void confirmDialog(
+            `The saved connection scope for ${label} is empty. Update it to allow all connections? You can narrow it down afterwards with Configure.`,
+            { title: 'Empty connection scope', confirmLabel: 'Allow all connections', danger: true }
+          ).then((ok) => {
+            if (ok) applyUpdate(null);
+          });
+          return;
+        }
+        applyUpdate(tool.connections);
       });
       actions.push(updateBtn);
     }
@@ -202,31 +226,14 @@ export function createWorkspacesView(ctx: AppContext): View {
     );
 
     const wrap = h('div', null, row);
-    if (isOpen) wrap.append(renderToolPanel(scopeType, scopePath, toolKey, tool));
+    if (isOpen) wrap.append(renderToolPanel(toolKey, tool));
     return wrap;
   }
 
   /* ---------- configure panel ---------- */
 
-  function renderToolPanel(scopeType: ScopeType, scopePath: string | null, toolKey: string, tool: WorkspaceToolState): HTMLElement {
+  function renderToolPanel(toolKey: string, tool: WorkspaceToolState): HTMLElement {
     const panel = h('div', { class: 'tool-panel' });
-
-    const globalTool = scopeType === 'workspace' ? scan?.user[toolKey] : undefined;
-    if (globalTool && isActive(globalTool)) {
-      panel.append(
-        h(
-          'div',
-          { class: 'row', style: 'margin-bottom:12px;align-items:flex-start' },
-          h('span', { html: svgIcon('alert', 14), style: 'color:var(--warn);display:inline-flex;margin-top:2px' }),
-          h(
-            'span',
-            { class: 'grow muted' },
-            h('b', { text: 'Also registered for all projects. ' }),
-            `Most tools let the project entry win, so this one applies here. All projects: ${describeConnections(globalTool.connections, globalTool.forceReadOnly)} · This project: ${describeConnections(tool.connections, tool.forceReadOnly)}. Turn one of them off if that is not what you want.`
-          )
-        )
-      );
-    }
 
     const connections = scan?.connections ?? [];
     const allowAll = tool.connections === null;
@@ -237,12 +244,12 @@ export function createWorkspacesView(ctx: AppContext): View {
     // and re-renders from the engine's answer, so what is shown is always what is written.
     function apply(next: string[] | null, forceReadOnly: boolean, message: string): void {
       applySettings(
-        { action: 'apply', scopeType, scopePath, tool: toolKey, enabled: true, connections: next, forceReadOnly },
+        { action: 'apply', scopeType: 'user', scopePath: null, tool: toolKey, enabled: true, connections: next, forceReadOnly },
         message
       );
     }
 
-    const radioName = `mode-${toolKey}-${scopePath ?? 'u'}`;
+    const radioName = `mode-${toolKey}`;
     const allRadio = h('input', { type: 'radio', name: radioName, checked: allowAll }) as HTMLInputElement;
     const someRadio = h('input', { type: 'radio', name: radioName, checked: !allowAll, disabled: connections.length === 0 }) as HTMLInputElement;
 
@@ -283,7 +290,7 @@ export function createWorkspacesView(ctx: AppContext): View {
       h('span', { class: 'toggle-track' }, h('span', { class: 'toggle-thumb' }))
     );
     forceToggleInput.addEventListener('change', () =>
-      apply(tool.connections, forceToggleInput.checked, forceToggleInput.checked ? 'Forced read-only mode enabled for this scope' : 'Forced read-only mode disabled')
+      apply(tool.connections, forceToggleInput.checked, forceToggleInput.checked ? 'Forced read-only mode enabled' : 'Forced read-only mode disabled')
     );
 
     panel.append(
@@ -337,113 +344,6 @@ export function createWorkspacesView(ctx: AppContext): View {
     return panel;
   }
 
-  /* ---------- scope cards ---------- */
-
-  interface ScopeCardOptions {
-    scopeType: ScopeType;
-    scopePath: string | null;
-    icon: string;
-    title: string;
-    subtitle: string;
-    subtitleTitle?: string;
-    tools: Record<string, WorkspaceToolState>;
-    missing?: boolean;
-    actions?: HTMLElement[];
-  }
-
-  function renderScopeCard(options: ScopeCardOptions): HTMLElement {
-    const entries = Object.entries(options.tools);
-    const activeCount = entries.filter(([, tool]) => isActive(tool)).length;
-    const head = h(
-      'div',
-      { class: 'scope-head' },
-      h('span', { class: 'scope-icon', html: svgIcon(options.icon, 16) }),
-      h('b', { class: 'scope-title', text: options.title }),
-      h('span', { class: 'scope-sub grow truncate', title: options.subtitleTitle ?? options.subtitle, text: options.subtitle }),
-      options.missing ? chip('folder missing', 'err') : null,
-      chip(`${activeCount} of ${entries.length} active`, activeCount > 0 ? 'ok' : 'ghost'),
-      ...(options.actions ?? [])
-    );
-    const card = h('div', { class: 'scope-card' }, head);
-    for (const [toolKey, tool] of entries) {
-      card.append(renderToolRow(options.scopeType, options.scopePath, toolKey, scan?.tools[toolKey]?.label ?? toolKey, tool));
-    }
-    return card;
-  }
-
-  function renderUserScope(): HTMLElement | null {
-    if (!scan) return null;
-    return renderScopeCard({
-      scopeType: 'user',
-      scopePath: null,
-      icon: 'grid',
-      title: 'All projects',
-      subtitle: 'Applies everywhere, unless a project folder has its own entry',
-      tools: scan.user
-    });
-  }
-
-  function renderWorkspacesSection(): HTMLElement {
-    const section = h('div');
-    if (!scan) return section;
-
-    const addBtn = h('button', { class: 'btn' });
-    addBtn.innerHTML = `${svgIcon('folder', 13)}<span>Add project folder</span>`;
-    addBtn.addEventListener('click', async () => {
-      const folder = await pickFolder();
-      if (!folder) return;
-      ctx.engine
-        .workspaceAction({ action: 'add', path: folder })
-        .then((payload) => {
-          scan = payload.scan;
-          toast(`Project added: ${folder}`, 'ok');
-          render();
-        })
-        .catch((error) => toast((error as Error).message, 'error'));
-    });
-
-    section.append(h('div', { class: 'section-head' }, h('h2', { class: 'section-title', text: 'Project folders' }), h('span', { class: 'grow' }), addBtn));
-
-    if (scan.workspaces.length === 0) {
-      section.append(h('div', { class: 'empty' }, 'Add a project folder to register LAZY SQL inside it.'));
-      return section;
-    }
-
-    for (const workspace of scan.workspaces) {
-      const removeBtn = h('button', { class: 'icon-btn danger', title: 'Remove from LAZY SQL (does not touch files)', 'aria-label': `Remove ${workspace.label}`, html: svgIcon('trash', 15) });
-      removeBtn.addEventListener('click', async () => {
-        const ok = await confirmDialog(`Remove "${workspace.label}" from LAZY SQL? Tool config files are left untouched.`, {
-          title: 'Remove project folder',
-          confirmLabel: 'Remove',
-          danger: true
-        });
-        if (!ok) return;
-        ctx.engine
-          .workspaceAction({ action: 'remove', path: workspace.path })
-          .then((payload) => {
-            scan = payload.scan;
-            toast('Project removed', 'ok');
-            render();
-          })
-          .catch((error) => toast((error as Error).message, 'error'));
-      });
-
-      section.append(
-        renderScopeCard({
-          scopeType: 'workspace',
-          scopePath: workspace.path,
-          icon: 'folder',
-          title: workspace.label,
-          subtitle: workspace.path,
-          tools: workspace.tools,
-          missing: !workspace.exists,
-          actions: [removeBtn]
-        })
-      );
-    }
-    return section;
-  }
-
   /* ---------- page chrome ---------- */
 
   function renderRestartNotice(): HTMLElement | null {
@@ -480,27 +380,70 @@ export function createWorkspacesView(ctx: AppContext): View {
       }),
       h('p', {
         class: 'card-sub',
-        html: 'Only that entry is edited — comments, order and formatting of the rest of the file stay as they are. The first time LAZY SQL changes a file, the original is kept next to it as <span class="mono">&lt;file&gt;.lazy-sql-backup</span> and never overwritten.'
+        html: 'Only that entry is edited — comments, order and formatting of the rest of the file stay as they are (JSON/JSONC and Codex TOML). The first time LAZY SQL changes a file, the original is kept next to it as <span class="mono">&lt;file&gt;.lazy-sql-backup</span> and never overwritten.'
       })
     );
   }
 
+  function renderToolList(): void {
+    listHost.replaceChildren();
+    if (!scan) return;
+
+    const needle = filterText.trim().toLowerCase();
+    const entries = Object.entries(scan.user).filter(([key, tool]) => {
+      if (!needle) return true;
+      return (scan?.tools[key]?.label ?? key).toLowerCase().includes(needle);
+    });
+    const activeCount = entries.filter(([, tool]) => isActive(tool)).length;
+
+    if (entries.length === 0) {
+      listHost.append(h('div', { class: 'empty' }, `No AI tools match "${filterInput.value}".`));
+      return;
+    }
+
+    const card = h(
+      'div',
+      { class: 'scope-card' },
+      h(
+        'div',
+        { class: 'scope-head' },
+        h('span', { class: 'scope-icon', html: svgIcon('grid', 16) }),
+        h('b', { class: 'scope-title', text: 'Your AI tools' }),
+        h('span', { class: 'scope-sub grow truncate', text: 'Applies to every project on this machine' }),
+        chip(`${activeCount} of ${entries.length} on`, activeCount > 0 ? 'ok' : 'ghost')
+      )
+    );
+    for (const [toolKey, tool] of entries) {
+      card.append(renderToolRow(toolKey, scan.tools[toolKey]?.label ?? toolKey, tool));
+    }
+    listHost.append(card);
+  }
+
   function render(): void {
+    const wasFocused = document.activeElement === filterInput;
     container.replaceChildren();
     if (!scan) {
       container.append(h('div', { class: 'muted', text: 'Loading…' }));
       return;
     }
 
-    container.append(
+    appendChildren(container, [
       crumb('SET UP', 'AI tools'),
       h('h1', { class: 'page-title', text: 'AI tools' }),
       h('p', {
         class: 'page-sub',
-        text: 'Let your AI coding tools use LAZY SQL. Register it for all projects, or only for specific project folders, and choose which connections each entry may use.'
-      })
-    );
-    appendChildren(container, [renderRestartNotice(), renderUserScope(), renderWorkspacesSection(), renderAdvanced()]);
+        text: 'Let your AI coding tools use LAZY SQL. Turn a tool on once for your user account — it then works in every project, with the connections you choose.'
+      }),
+      h('div', { class: 'row', style: 'margin-bottom:14px;gap:10px' }, h('span', { class: 'search-box grow' }, h('span', { class: 'icon-wrap', html: svgIcon('search', 14) }), filterInput)),
+      renderRestartNotice(),
+      listHost,
+      renderAdvanced()
+    ]);
+    renderToolList();
+    if (wasFocused) {
+      filterInput.focus();
+      filterInput.setSelectionRange(filterInput.value.length, filterInput.value.length);
+    }
   }
 
   ctx.engine

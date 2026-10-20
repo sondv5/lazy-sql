@@ -334,6 +334,68 @@ test('applyTool returns a snippet when the config file cannot be parsed', () => 
   assert.ok(result.snippet.includes('lazy-sql'));
 });
 
+test('applyTool writes VS Code servers entries and treats an empty config as empty', () => {
+  const ids = seedConnections('alpha');
+  const ws = fs.mkdtempSync(path.join(tmpDir, 'ws-vscode-'));
+  fs.mkdirSync(path.join(ws, '.vscode'));
+  fs.writeFileSync(path.join(ws, '.vscode', 'mcp.json'), '');
+  addWorkspace(ws);
+  let state = scanWorkspaces().workspaces.find((entry) => path.resolve(entry.path) === path.resolve(ws)).tools.vscode;
+  assert.equal(state.parseError, false, 'an empty file is a valid empty config');
+  assert.equal(state.registered, false);
+
+  applyTool({ scopeType: 'workspace', scopePath: ws, tool: 'vscode', enabled: true, connections: [ids.alpha], forceReadOnly: false });
+  const written = JSON.parse(fs.readFileSync(path.join(ws, '.vscode', 'mcp.json'), 'utf8'));
+  const entry = written.servers['lazy-sql'];
+  assert.equal(entry.type, 'stdio');
+  assert.equal(entry.command, 'node');
+  assert.deepEqual(entry.args, [engineEntryPath()]);
+  assert.equal(entry.env.LAZY_SQL_ALLOWED_CONNECTIONS, ids.alpha);
+  state = scanWorkspaces().workspaces.find((item) => path.resolve(item.path) === path.resolve(ws)).tools.vscode;
+  assert.equal(state.registered, true);
+  assert.deepEqual(state.connections, [ids.alpha]);
+  removeWorkspace(ws);
+});
+test('applyTool writes Zed context_servers entries', () => {
+  const ws = fs.mkdtempSync(path.join(tmpDir, 'ws-zed-'));
+  applyTool({ scopeType: 'workspace', scopePath: ws, tool: 'zed', enabled: true, connections: null, forceReadOnly: true });
+  const written = JSON.parse(fs.readFileSync(path.join(ws, '.zed', 'settings.json'), 'utf8'));
+  const entry = written.context_servers['lazy-sql'];
+  assert.equal(entry.source, 'custom');
+  assert.equal(entry.command.path, 'node');
+  assert.deepEqual(entry.command.args, [engineEntryPath()]);
+  assert.equal(entry.command.env.LAZY_SQL_FORCE_READ_ONLY, '1');
+});
+test('applyTool edits only the Codex TOML table and can remove it', () => {
+  const ws = fs.mkdtempSync(path.join(tmpDir, 'ws-codex-'));
+  fs.mkdirSync(path.join(ws, '.codex'));
+  const original = '# keep this comment\nmodel = "gpt-5"\n\n[mcp_servers.other]\ncommand = "other"\n';
+  fs.writeFileSync(path.join(ws, '.codex', 'config.toml'), original);
+  addWorkspace(ws);
+
+  applyTool({ scopeType: 'workspace', scopePath: ws, tool: 'codex', enabled: true, connections: null, forceReadOnly: true });
+  const written = fs.readFileSync(path.join(ws, '.codex', 'config.toml'), 'utf8');
+  assert.ok(written.includes('# keep this comment'));
+  assert.ok(written.includes('model = "gpt-5"'));
+  assert.ok(written.includes('[mcp_servers.other]'));
+  assert.ok(written.includes('[mcp_servers."lazy-sql"]'));
+  assert.ok(written.includes('startup_timeout_sec = 20'));
+  assert.ok(written.includes('LAZY_SQL_FORCE_READ_ONLY = "1"'));
+
+  let state = scanWorkspaces().workspaces.find((entry) => path.resolve(entry.path) === path.resolve(ws)).tools.codex;
+  assert.equal(state.registered, true);
+  assert.equal(state.forceReadOnly, true);
+  assert.equal(state.needsUpdate, false);
+
+  applyTool({ scopeType: 'workspace', scopePath: ws, tool: 'codex', enabled: false });
+  const removed = fs.readFileSync(path.join(ws, '.codex', 'config.toml'), 'utf8');
+  assert.equal(removed.includes('lazy-sql'), false);
+  assert.ok(removed.includes('[mcp_servers.other]'));
+  state = scanWorkspaces().workspaces.find((entry) => path.resolve(entry.path) === path.resolve(ws)).tools.codex;
+  assert.equal(state.registered, false);
+  removeWorkspace(ws);
+});
+
 console.log('unit: workspaces (connection scope)');
 function cursorEnv(ws) {
   return JSON.parse(fs.readFileSync(path.join(ws, '.cursor', 'mcp.json'), 'utf8')).mcpServers['lazy-sql'].env;

@@ -67,7 +67,7 @@ jobs:
           args: ${{ matrix.args }}
 
       # normalize bundle names for the release page:
-      # "LAZY SQL_0.1.0_x64-setup.exe" -> "LAZY-SQL-0.1.0-win-x64-setup.exe"
+      # "LAZY SQL_0.2.0_x64-setup.exe" -> "LAZY-SQL-0.2.0-win-x64-setup.exe"
       - name: Collect installers with release names
         shell: bash
         run: |

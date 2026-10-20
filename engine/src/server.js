@@ -12,10 +12,11 @@ import {
   listConnections,
   upsertConnection
 } from './config.js';
-import { clearExecutionLogs, executionLogStats, listLogDates, listLogsByDate, appendExecutionLog } from './exec-logs.js';
+import { clearExecutionLogs, executionLogStats, listLogDates, listLogsByDate, listRecentLogs, appendExecutionLog } from './exec-logs.js';
 import { executeSql, sanitizeErrorMessage } from './executor.js';
 import { listInstances } from './instances.js';
 import { log, logError } from './logger.js';
+import { getDbObjects } from './objects.js';
 import { DATA_DIR, readEnv } from './paths.js';
 import { getCompletionSchema } from './schema.js';
 import { getAppSettings, saveAppSettings } from './settings.js';
@@ -168,6 +169,19 @@ export class WebUI {
       res.json({ date, entries: listLogsByDate(date) });
     });
 
+    app.get('/api/history', requireToken, (req, res) => {
+      try {
+        res.json({
+          entries: listRecentLogs({
+            limit: Number(req.query.limit) || 200,
+            connection: req.query.connection ? String(req.query.connection) : null
+          })
+        });
+      } catch (error) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+
     app.delete('/api/logs', requireToken, (req, res) => {
       res.json({ ok: clearExecutionLogs() });
     });
@@ -275,6 +289,43 @@ export class WebUI {
       if (!connection) return res.status(404).json({ error: 'connection not found' });
       try {
         res.json({ connection: connection.name, engine: connection.engine, schema: await getCompletionSchema(connection) });
+      } catch (error) {
+        res.status(400).json({ error: error.message });
+      }
+    });
+
+    // ---- object browser (SQL workspace) ----
+    app.get('/api/objects/detail', requireToken, async (req, res) => {
+      const connection = findConnection(String(req.query.connection ?? ''));
+      if (!connection) return res.status(404).json({ error: 'connection not found' });
+      const name = String(req.query.name ?? '').trim();
+      if (!name) return res.status(400).json({ error: 'name is required' });
+      try {
+        res.json(
+          await getDbObjects({
+            connection,
+            name,
+            schema: req.query.schema ? String(req.query.schema) : undefined,
+            includeDefinition: req.query.definition === '1'
+          })
+        );
+      } catch (error) {
+        res.status(400).json({ error: error.message });
+      }
+    });
+
+    app.get('/api/objects', requireToken, async (req, res) => {
+      const connection = findConnection(String(req.query.connection ?? ''));
+      if (!connection) return res.status(404).json({ error: 'connection not found' });
+      try {
+        res.json(
+          await getDbObjects({
+            connection,
+            objectType: req.query.objectType ? String(req.query.objectType) : 'all',
+            filter: req.query.filter ? String(req.query.filter) : undefined,
+            limit: req.query.limit ? Number(req.query.limit) : undefined
+          })
+        );
       } catch (error) {
         res.status(400).json({ error: error.message });
       }

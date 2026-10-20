@@ -80,6 +80,24 @@ export function listLogsByDate(date) {
     .reverse();
 }
 
+// Recent entries across days for the SQL workspace history panel. Response previews are dropped —
+// the UI only needs the statement, its status and target.
+export function listRecentLogs({ limit = 200, connection = null } = {}) {
+  const capped = Math.min(Math.max(Number(limit) || 200, 1), 1000);
+  const needle = connection ? String(connection).toLowerCase() : null;
+  return parseEntries()
+    .reverse()
+    .filter((entry) => {
+      if (!needle) return true;
+      return (
+        String(entry.connection?.id ?? '').toLowerCase() === needle ||
+        String(entry.connection?.name ?? '').toLowerCase() === needle
+      );
+    })
+    .slice(0, capped)
+    .map(({ responsePreview, ...entry }) => entry);
+}
+
 export function clearExecutionLogs() {
   try {
     fs.rmSync(EXEC_LOG_FILE, { force: true });

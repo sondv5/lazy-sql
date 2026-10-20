@@ -1,6 +1,6 @@
 {
   "name": "lazy-sql-engine",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "LAZY SQL engine: local MCP server (stdio) + local HTTP API with reviewed SQL execution, execution logs and workspace/MCP management.",

@@ -55,9 +55,6 @@ export function createHomeView(ctx: AppContext): View {
     if (!state.scan) return 0;
     let count = 0;
     for (const tool of Object.values(state.scan.user)) if (tool.registered && tool.enabled) count += 1;
-    for (const workspace of state.scan.workspaces) {
-      for (const tool of Object.values(workspace.tools)) if (tool.registered && tool.enabled) count += 1;
-    }
     return count;
   }
 
@@ -129,7 +126,7 @@ export function createHomeView(ctx: AppContext): View {
       stepCard({
         icon: 'grid',
         title: 'AI tools',
-        text: registered > 0 ? 'LAZY SQL is registered in your AI tools.' : 'Register LAZY SQL in OpenCode, Claude Code, Kiro or Cursor.',
+        text: registered > 0 ? 'LAZY SQL is registered in your AI tools.' : 'Register LAZY SQL in OpenCode, Claude Code, Cursor, Codex, Gemini CLI and 12 more.',
         badge: workspacesBadge,
         actions: [openWorkspaces]
       })

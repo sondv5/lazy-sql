@@ -7,10 +7,10 @@
 
 **LAZY SQL** gives your AI coding tools reviewed access to your databases.
 
-![LAZY SQL review dialog](docs/assets/shots/07-review.png) Read-only SQL runs instantly; **everything that changes data opens a review dialog first**. It is the next generation of the local `sql-mcp`: same multi-database engine (PostgreSQL / MySQL / SQL Server / SQLite), with a lightweight Tauri desktop app for connections, execution logs, workspace MCP toggles and the review dialog.
+![LAZY SQL review dialog](docs/assets/shots/07-review.png) Read-only SQL runs instantly; **everything that changes data opens a review dialog first**. It is the next generation of the local `sql-mcp`: same multi-database engine (PostgreSQL / MySQL / SQL Server / SQLite), with a lightweight Tauri desktop app for connections, a full SQL workspace, execution logs, AI tool toggles and the review dialog.
 
 ```
-[ AI tool: OpenCode · Claude Code · Kiro · Cursor ]
+[ AI tool: OpenCode · Claude Code · Cursor · Codex · Gemini CLI · VS Code · … ]
         │  stdio MCP
         ▼
 [ LAZY SQL engine (Node, single bundled file) ]
@@ -21,17 +21,17 @@
         │  local HTTP API (127.0.0.1 + per-session token)
         ▼
 [ LAZY SQL desktop app (Tauri 2 — ~10 MB shell, system webview) ]
-   ├── Main window   → connections · SQL editor · logs · AI tools · settings
-   └── --review mode → frameless dialog window, spawned per review by the engine session
+   ├── Main window   → connections · SQL workspace · logs · AI tools · settings
+   └── --review mode → frameless dialog window (no other window), spawned per review
 ```
 
 ## Highlights
 
-- **Review dialog, not a popup page** — the engine session that requests a review spawns the app in dialog mode itself: a dedicated frameless window (always-on-top, docked to the right edge) with an editable SQL editor: syntax highlighting, schema-aware autocomplete (CodeMirror 6), statement badges, danger warnings, expiry countdown, live execution results. Nothing runs until you click **Run query** — and the edited SQL is what executes and gets logged. The main app never needs to be open; without the app installed, reviews fall back to a browser page. Rejecting — or letting the review expire — closes the dialog automatically.
-- **Built-in SQL editor** — pick any configured connection and write SQL yourself with highlighting + autocomplete. Read-only connections block writes here too, and every manual run lands in the execution log (tagged `manual`).
-- **Main window = settings + logs** — connection manager (add/edit/test/delete), multi-database support, execution history by date with table/raw payload inspection, and workspace management. Reviews never surface in the main window — they belong to the engine session that requested them.
-- **Enable/disable per connection + read-only mode** — every connection has an `enabled` flag (agent visibility) and a `read-only` flag (writes blocked server-side *and* at the driver session level). `LAZY_SQL_FORCE_READ_ONLY=1` locks an entire workspace read-only.
-- **Per-user & per-workspace MCP toggles** — register or remove the LAZY SQL MCP server for **OpenCode, Claude Code, Kiro and Cursor**, globally (user scope) or per workspace folder; pick exactly which connections each scope may use. Tool configs are edited as text with a minimal diff — comments, key order, indentation and line endings of everything else stay exactly as you wrote them — and the first edit of a file keeps the untouched original as `<file>.lazy-sql-backup` (never overwritten by later edits).
+- **Review dialog, not a popup page** — the engine session that requests a review spawns the app in dialog mode itself: a single frameless window (docked to the right edge, focused when it opens — not always-on-top) with an editable SQL editor: syntax highlighting, schema-aware autocomplete (CodeMirror 6), statement badges, danger warnings, expiry countdown, live execution results. Nothing runs until you click **Run query** — and the edited SQL is what executes and gets logged. The main app never needs to be open; without the app installed, reviews fall back to a browser page. Rejecting — or letting the review expire — closes the dialog automatically.
+- **Full SQL workspace** — object explorer (tables, views, functions, procedures, triggers; columns, PK/FK, indexes and definitions), data preview, multi-tab queries, selection runs, query plans (`EXPLAIN`), saved queries, recent execution history, row caps, and CSV/JSON export. Read-only connections block writes here too, and every manual run lands in the execution log (tagged `manual`).
+- **Main window = settings + logs** — connection manager (add/edit/test/delete), multi-database support, execution history by date with table/raw payload inspection. Reviews never surface in the main window — they belong to the engine session that requested them.
+- **Enable/disable per connection + read-only mode** — every connection has an `enabled` flag (agent visibility) and a `read-only` flag (writes blocked server-side *and* at the driver session level). `LAZY_SQL_FORCE_READ_ONLY=1` locks a whole session read-only.
+- **Per-tool MCP toggles** — register or remove the LAZY SQL MCP server for **OpenCode, Claude Code, Cursor, Windsurf, VS Code (Copilot), GitHub Copilot CLI, OpenAI Codex, Gemini CLI, Qwen Code, Kiro, Cline, Roo Code, Kilo Code, JetBrains Junie, Factory Droid, Zed and Amazon Q Developer** at user scope — one toggle per tool, no per-folder setup. Pick which connections that tool may use. Tool configs are edited as text with a minimal diff — comments, key order, indentation and formatting of everything else stay exactly as you wrote them (JSON/JSONC, plus Codex TOML) — and the first edit of a file keeps the untouched original as `<file>.lazy-sql-backup` (never overwritten by later edits).
 - **Import / export connections (.json)** — all connections travel as one `.json` file; passwords opt-in only (`${ENV_VAR}` placeholders preferred); conflict handling on import: skip / overwrite / keep-both.
 - **Logs on every run** — read queries, approved writes (final SQL + params), rejections, timeouts and blocks are all written to a local JSONL log with the exact payload returned to the agent. Browse by date, filter by status, copy the SQL.
 - **Frameless custom chrome** — no native title bar: custom window buttons, macOS traffic-light style on mac, rounded corners; system tray with show/quit; close-to-tray option.
@@ -64,7 +64,7 @@ Dev tips:
 
 ## Register the MCP server
 
-The easiest way is **AI tools** in the app: add your repo folder, flip the toggle next to each tool, and choose the connection scope. Manual examples:
+The easiest way is **AI tools** in the app: flip the toggle next to each tool and choose the connection scope. It registers the tool at user scope, so the same setup works in every project. Manual examples:
 
 **OpenCode** (`opencode.json`)
 
@@ -81,7 +81,7 @@ The easiest way is **AI tools** in the app: add your repo folder, flip the toggl
 }
 ```
 
-**Cursor** (`.cursor/mcp.json`) · **Claude Code** (`.mcp.json`, user scope in `~/.claude.json`) · **Kiro** (`.kiro/settings/mcp.json`):
+**Cursor** (`~/.cursor/mcp.json`) · **Claude Code** (`~/.claude.json`) · **Kiro** (`~/.kiro/settings/mcp.json`) · **Windsurf** (`~/.config/devin/mcp_config.json`) · **Gemini CLI** (`~/.gemini/settings.json`) · **Qwen Code** (`~/.qwen/settings.json`) · **Junie** (`~/.junie/mcp/mcp.json`) · **Factory Droid** (`~/.factory/mcp.json`) · **Cline/Roo/Kilo** (VS Code globalStorage):
 
 ```json
 {
@@ -95,6 +95,17 @@ The easiest way is **AI tools** in the app: add your repo folder, flip the toggl
 }
 ```
 
+**VS Code** uses the `"servers"` key, **Zed** uses `"context_servers"` (with `command.path` / `command.args`), and **OpenAI Codex** uses a TOML table:
+
+```toml
+[mcp_servers."lazy-sql"]
+command = "node"
+args = ["D:\\path\\to\\lazy-sql\\engine\\src\\index.js"]
+env = { LAZY_SQL_FORCE_READ_ONLY = "1" }
+```
+
+The AI tools page writes the correct shape for each client automatically.
+
 ## Storage & environment
 
 All local, nothing leaves the machine. Data lives in **`~/.lazy-sql`** (Windows: `C:\Users\<you>\.lazy-sql`). Upgrading from a build that still used `~/.sql-crew`? The folder is moved automatically on first start (kept in place only if it cannot be moved, e.g. locked files).
@@ -103,7 +114,7 @@ All local, nothing leaves the machine. Data lives in **`~/.lazy-sql`** (Windows:
 | --- | --- |
 | `connections.json` | connections (0600; passwords plaintext by design — prefer `${ENV_VAR}`) |
 | `app-settings.json` | review timeout, fallback behavior, tray, desktop app path |
-| `workspaces.json` | workspace folders + desired MCP toggle state |
+| `workspaces.json` | desired per-tool MCP toggle state (older builds also stored project folders here) |
 | `execution-log.jsonl` | execution history (10 MB cap, last 5000 entries) |
 | `instances/` | live session registry (each engine instance heartbeats) |
 | `engine.log` | daemon stderr (when spawned by the desktop app) |

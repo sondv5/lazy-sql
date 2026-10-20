@@ -135,6 +135,62 @@ export interface InstanceRecord {
   state?: InstanceState | null;
 }
 
+export interface DbObjectSummary {
+  schema: string;
+  name: string;
+  kind: string;
+}
+
+export interface DbObjectColumn {
+  name: string;
+  type: string | null;
+  nullable: boolean;
+  defaultValue: string | null;
+  extra: string | null;
+}
+
+export interface DbObjectDetail {
+  schema: string;
+  name: string;
+  kind: string;
+  columns: DbObjectColumn[];
+  primaryKey: string[];
+  foreignKeys: Array<{
+    constraintName: string;
+    columns: string[];
+    references: { schema: string | null; table: string | null; columns: string[] };
+  }>;
+  indexes: Array<{ name: string; unique: boolean; columns: string[]; definition?: string | null }>;
+  parameters: Array<{ name: string | null; type: string | null; mode: string | null; position: number | null }>;
+  definition: string | null;
+  table?: string;
+  returnType?: string | null;
+}
+
+export interface DbObjectsList {
+  status: string;
+  engine: string;
+  connection: { id?: string; name: string; engine: string; target: string };
+  mode: 'list';
+  objectType: string;
+  filter: string | null;
+  count: number;
+  truncated: boolean;
+  objects: DbObjectSummary[];
+  note?: string;
+}
+
+export interface DbObjectDetailResponse {
+  status: string;
+  engine: string;
+  connection: { id?: string; name: string; engine: string; target: string };
+  mode: 'detail';
+  found: boolean;
+  object?: DbObjectDetail;
+  message?: string;
+  note?: string;
+}
+
 export interface WorkspaceToolState {
   configPath: string;
   exists: boolean;
@@ -271,6 +327,24 @@ export class Engine {
 
   logs(date: string): Promise<{ date: string; entries: LogEntry[] }> {
     return this.api(`/api/logs?date=${encodeURIComponent(date)}`);
+  }
+
+  history(limit = 300, connection?: string): Promise<{ entries: LogEntry[] }> {
+    const params = new URLSearchParams({ limit: String(limit) });
+    if (connection) params.set('connection', connection);
+    return this.api(`/api/history?${params.toString()}`);
+  }
+
+  objects(connectionId: string, limit = 1000, filter?: string): Promise<DbObjectsList> {
+    const params = new URLSearchParams({ connection: connectionId, limit: String(limit) });
+    if (filter) params.set('filter', filter);
+    return this.api(`/api/objects?${params.toString()}`);
+  }
+
+  objectDetail(connectionId: string, object: DbObjectSummary, includeDefinition = false): Promise<DbObjectDetailResponse> {
+    const params = new URLSearchParams({ connection: connectionId, name: object.name, schema: object.schema });
+    if (includeDefinition) params.set('definition', '1');
+    return this.api(`/api/objects/detail?${params.toString()}`);
   }
 
   clearLogs(): Promise<{ ok: boolean }> {

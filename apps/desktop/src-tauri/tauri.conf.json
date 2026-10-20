@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "LAZY SQL",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "identifier": "com.lazysql",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -10,21 +10,6 @@
     "frontendDist": "../dist"
   },
   "app": {
-    "windows": [
-      {
-        "label": "main",
-        "title": "LAZY SQL",
-        "width": 1180,
-        "height": 780,
-        "minWidth": 940,
-        "minHeight": 600,
-        "center": true,
-        "decorations": false,
-        "transparent": true,
-        "shadow": true,
-        "visible": true
-      }
-    ],
     "security": {
       "csp": null
     },

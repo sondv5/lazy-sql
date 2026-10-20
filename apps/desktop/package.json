@@ -1,7 +1,7 @@
 {
   "name": "lazy-sql-app",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "description": "LAZY SQL desktop app (Tauri 2): connections, execution logs, workspace MCP toggles and the SQL review dialog.",
   "scripts": {

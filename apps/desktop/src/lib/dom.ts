@@ -97,6 +97,8 @@ const ICONS: Record<string, string> = {
   swap: '<path d="M7 8h13l-3-3"/><path d="M17 16H4l3 3"/>',
   clock: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.5 2"/>',
   filter: '<path d="M4 5h16l-6.5 7.5V19l-3-1.5v-5Z"/>',
+  panelLeft: '<rect x="3.5" y="4.5" width="17" height="15" rx="2"/><path d="M9.5 4.5v15"/>',
+  bookmark: '<path d="M6.5 4.5h11v16l-5.5-3.5-5.5 3.5Z"/>',
   external: '<path d="M14 4h6v6"/><path d="M20 4 11 13"/><path d="M9 6H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3"/>'
 };
 

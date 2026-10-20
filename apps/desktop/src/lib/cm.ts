@@ -93,6 +93,7 @@ export interface SqlEditorOptions {
   onChange?: (value: string) => void;
   onSelectionChange?: (hasSelection: boolean) => void;
   onRun?: () => void;
+  onRunSelection?: () => void;
 }
 
 export function selectedSql(view: EditorView): string {
@@ -139,7 +140,8 @@ export function mountSqlEditor(container: HTMLElement, options: SqlEditorOptions
         keydown: (event, view) => {
           if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
             event.preventDefault();
-            options.onRun?.();
+            if (event.shiftKey && options.onRunSelection) options.onRunSelection();
+            else options.onRun?.();
             return true;
           }
           return false;

@@ -16,7 +16,7 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     title: 'Work',
     items: [
-      { id: 'query', label: 'SQL editor', icon: 'terminal' },
+      { id: 'query', label: 'SQL', icon: 'terminal' },
       { id: 'logs', label: 'Logs', icon: 'book' }
     ]
   },

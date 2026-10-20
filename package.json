@@ -1,7 +1,7 @@
 {
   "name": "lazy-sql",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "LAZY SQL — reviewed SQL execution MCP for AI coding tools (OpenCode, Claude Code, Kiro, Cursor) with a lightweight Tauri desktop companion for connections, logs and workspace toggles.",
   "workspaces": [
     "engine",
